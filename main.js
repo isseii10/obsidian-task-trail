@@ -137,17 +137,36 @@ function nextLine(line, settings, now = moment()) {
   return next.mark ? stamp(out, next.mark, format, head.length, now) : out;
 }
 
-/** Why a state symbol cannot be used, or null if it can
-    @param {string} symbol
-    @param {State[]} states
-    @param {number} index the state being edited, which may keep its own symbol
-    @returns {string | null} */
-function symbolError(symbol, states, index) {
-  if ([...symbol].length !== 1) return "Use exactly one character";
-  if (symbol === "[" || symbol === "]") return "Brackets cannot be used";
-  if (states.some((st, i) => i !== index && st.symbol === symbol)) return "Already in the cycle";
-  return null;
-}
+/* The settings offer states and marks only from these lists, rather than free text. Free text let through
+   values that break the plugin: a mark containing digits is mistaken for a time, a mark made of letters
+   matches ordinary words (and "Clear times when unchecked" would then delete text), and some characters are
+   not rendered as a checkbox by Obsidian. A value already saved outside the lists (e.g. edited in data.json)
+   is kept and shown as custom, so an existing setup keeps working. */
+
+/** Characters between the brackets, from the alternate checkboxes common in themes */
+const SYMBOL_OPTIONS = [
+  { value: " ", label: "[ ] to do" },
+  { value: "x", label: "[x] done" },
+  { value: "~", label: "[~] in progress" },
+  { value: "/", label: "[/] in progress" },
+  { value: "-", label: "[-] cancelled" },
+  { value: ">", label: "[>] forwarded" },
+  { value: "<", label: "[<] scheduled" },
+  { value: "?", label: "[?] question" },
+  { value: "!", label: "[!] important" },
+  { value: "*", label: "[*] star" },
+];
+
+/** Marks, from the Tasks plugin's date emoji */
+const MARK_OPTIONS = [
+  { value: "", label: "No time" },
+  { value: "🛫", label: "🛫 start" },
+  { value: "✅", label: "✅ done" },
+  { value: "❌", label: "❌ cancelled" },
+  { value: "➕", label: "➕ created" },
+  { value: "⏳", label: "⏳ scheduled" },
+  { value: "📅", label: "📅 due" },
+];
 
 class TodoStatePlugin extends Plugin {
   async onload() {
@@ -283,7 +302,7 @@ class TodoStateSettingTab extends PluginSettingTab {
     const save = () => this.plugin.saveSettings();
     containerEl.empty();
 
-    // Draw the mark inputs in the same font as notes, so marks that rely on a font set up for notes
+    // Draw the mark dropdowns in the same font as notes, so marks that rely on a font set up for notes
     // (theme, CSS snippet) look the same here instead of showing as boxes in the settings UI font
     const noteEl = document.querySelector(".markdown-source-view.mod-cm6 .cm-scroller, .markdown-rendered");
     const markFont = noteEl ? getComputedStyle(noteEl).fontFamily : "var(--font-text)";
@@ -298,6 +317,18 @@ class TodoStateSettingTab extends PluginSettingTab {
       .setHeading();
 
     const states = s.states;
+    /** Fill a dropdown from a list. Values taken by another state are disabled, and a saved value outside the
+        list is kept as a custom option
+        @param {import("obsidian").DropdownComponent} d
+        @param {{ value: string, label: string }[]} options
+        @param {string} current
+        @param {(value: string) => boolean} taken */
+    const addOptions = (d, options, current, taken) => {
+      if (!options.some((o) => o.value === current)) d.addOption(current, `${current} (custom)`);
+      for (const o of options) d.addOption(o.value, o.label);
+      for (const el of Array.from(d.selectEl.options)) el.disabled = el.value !== current && taken(el.value);
+      d.setValue(current);
+    };
     /** @param {number} from @param {number} to */
     const move = async (from, to) => {
       states.splice(to, 0, states.splice(from, 1)[0]);
@@ -305,30 +336,25 @@ class TodoStateSettingTab extends PluginSettingTab {
       this.display();
     };
     states.forEach((st, i) => {
-      const row = new Setting(containerEl).setName(`[${st.symbol}]`);
-      row.addText((t) => {
-        t.setPlaceholder("Space").setValue(st.symbol === " " ? "" : st.symbol);
-        t.inputEl.size = 6;
-        t.inputEl.title = "Character between the brackets. Leave empty for a space ([ ])";
-        t.onChange(async (v) => {
-          const symbol = v === "" ? " " : v;
-          const error = symbolError(symbol, states, i);
-          t.inputEl.style.borderColor = error ? "var(--text-error)" : "";
-          t.inputEl.title = error || "Character between the brackets. Leave empty for a space ([ ])";
-          if (error) return;
-          st.symbol = symbol;
-          row.setName(`[${symbol}]`);
+      const row = new Setting(containerEl).setName(`State ${i + 1}`);
+      row.addDropdown((d) => {
+        addOptions(d, SYMBOL_OPTIONS, st.symbol, (v) => states.some((o, j) => j !== i && o.symbol === v));
+        d.selectEl.title = "Character between the brackets";
+        d.onChange(async (v) => {
+          st.symbol = v;
           await save();
+          this.display();
         });
       });
-      row.addText((t) => {
-        t.setPlaceholder("No time").setValue(st.mark);
-        t.inputEl.style.fontFamily = markFont;
-        t.inputEl.size = 8;
-        t.inputEl.title = "Mark added with the time when a task switches to this state";
-        t.onChange(async (v) => {
-          st.mark = v.trim();
+      row.addDropdown((d) => {
+        // A mark used by two states would make one state's time count as the other's
+        addOptions(d, MARK_OPTIONS, st.mark, (v) => v !== "" && states.some((o, j) => j !== i && o.mark === v));
+        d.selectEl.style.fontFamily = markFont;
+        d.selectEl.title = "Mark added with the time when a task switches to this state";
+        d.onChange(async (v) => {
+          st.mark = v;
           await save();
+          this.display();
         });
       });
       row.addExtraButton((b) =>
@@ -361,14 +387,17 @@ class TodoStateSettingTab extends PluginSettingTab {
 
     new Setting(containerEl)
       .addButton((b) =>
-        b.setButtonText("Add state").onClick(async () => {
-          // Pick a free symbol so the new row is valid right away; the user can change it
-          const symbol = ["/", ">", "<", "?", "!", "*"].find((c) => !states.some((st) => st.symbol === c));
-          if (!symbol) return;
-          states.push({ symbol, mark: "" });
-          await save();
-          this.display();
-        }),
+        b
+          .setButtonText("Add state")
+          .setDisabled(SYMBOL_OPTIONS.every((o) => states.some((st) => st.symbol === o.value)))
+          .onClick(async () => {
+            // The first symbol not in use, so the new row is valid right away; the user can change it
+            const free = SYMBOL_OPTIONS.find((o) => !states.some((st) => st.symbol === o.value));
+            if (!free) return;
+            states.push({ symbol: free.value, mark: "" });
+            await save();
+            this.display();
+          }),
       )
       .addButton((b) =>
         b.setButtonText("Reset to default").onClick(async () => {
@@ -440,5 +469,5 @@ class TodoStateSettingTab extends PluginSettingTab {
 
 // `internals`: the line-editing functions, for the tests (test/). Obsidian only uses the class itself
 module.exports = Object.assign(TodoStatePlugin, {
-  internals: { nextLine, stamp, clearStamps, timeLength, symbolError, DEFAULT_SETTINGS },
+  internals: { nextLine, stamp, clearStamps, timeLength, DEFAULT_SETTINGS },
 });

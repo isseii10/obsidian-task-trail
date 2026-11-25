@@ -14,15 +14,18 @@ Open Settings → Community plugins → TODO State. The defaults give the behavi
 
 | Setting | Default | Description |
 | --- | --- | --- |
-| States | `[ ]`, `[~]` 🛫, `[x]` ✅, `[-]` | The cycle, in order. Each state has a symbol (the character between the brackets; leave empty for a space) and a mark (see below). Reorder with the arrows, add with "Add state", remove with the trash icon. "Reset to default" restores the default cycle |
+| States | `[ ]`, `[~]` 🛫, `[x]` ✅, `[-]` | The cycle, in order. Each state has a symbol (the character between the brackets) and a mark (see below), both chosen from a list. Reorder with the arrows, add with "Add state", remove with the trash icon. "Reset to default" restores the default cycle |
 | Time format | `YYYY-MM-DD HH:mm` | A [moment.js format](https://momentjs.com/docs/#/displaying/format/). Empty resets it to the default |
 | Clear times when unchecked | Off | When a task goes back to `[ ]`, remove every "mark time" added with the configured marks. A mark not followed by a time, and text such as other plugins' dates, is left alone |
 | Checkbox clicks: Live Preview | On | When off, clicking a checkbox in Live Preview gets Obsidian's default behavior (or another plugin's, such as Tasks) |
 | Checkbox clicks: Reading view | On | The same for Reading view |
 
 - Clicking a checkbox (or running the command) moves the task to the next state in the list, and from the last state back to the first. A task whose symbol is not in the list goes to the first state
-- A state's mark is added with the time when a task switches to that state. Any text works (emoji, symbols, words). Leave it empty to add no time for that state
-- A symbol must be a single character, cannot be a bracket, and must not appear twice. The cycle needs at least two states
+- A state's mark is added with the time when a task switches to that state. Choose "No time" to add none
+- Symbols: `[ ]` to do, `[x]` done, `[~]` in progress, `[/]` in progress, `[-]` cancelled, `[>]` forwarded, `[<]` scheduled, `[?]` question, `[!]` important, `[*]` star
+- Marks: 🛫 start, ✅ done, ❌ cancelled, ➕ created, ⏳ scheduled, 📅 due (the Tasks plugin's date emoji)
+- A symbol or mark already used by another state cannot be chosen. The cycle needs at least two states
+- The lists keep out values that break the plugin: a mark with digits is mistaken for a time, and a mark made of letters matches ordinary words. A value set outside the lists by editing `data.json` is kept and shown as "(custom)"
 - Whether a line already has a time is checked using the configured marks: a mark counts as stamped when the text after it (ignoring spaces) starts with a digit or parses with the configured format. Because anything starting with a digit counts, changing the format does not add a second time to lines stamped in the old format
 - After changing a mark, lines that only have the old mark get a new stamp with the new mark
 - An incomplete time right after a mark (e.g. `🛫 2026-01-0`) still counts as a time, so no new time is added; fix it by hand. It cannot be told apart from a time in an earlier format, which must not be overwritten. "Clear times when unchecked" removes incomplete times as well
