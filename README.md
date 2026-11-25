@@ -76,11 +76,13 @@ CI (`.github/workflows/test.yml`) runs the same checks on every push and pull re
 
 ## Releasing
 
-Bump `version` in `manifest.json`, create a release with a tag of the same name, and attach `main.js`, `manifest.json` and `styles.css`.
+Bump `version` in `manifest.json`, commit, and push a tag of the same name.
 
 ```sh
-gh release create X.Y.Z main.js manifest.json styles.css --title X.Y.Z --notes "..."
+git tag X.Y.Z && git push origin X.Y.Z
 ```
+
+CI then runs the checks, attests `main.js`, `manifest.json` and `styles.css` (GitHub artifact attestations, recommended by the community plugin directory), and creates a draft release with them attached. Edit its notes and publish it. Anyone can verify a downloaded file with `gh attestation verify main.js --repo isseii10/obsidian-task-trail`.
 
 ## License
 
