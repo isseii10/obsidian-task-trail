@@ -1,12 +1,17 @@
 {
   "name": "obsidian-todo-state",
   "private": true,
-  "description": "Development only: the plugin itself is main.js and needs no build. This file is for the tests.",
+  "description": "Development only: the plugin itself is main.js and needs no build. This file is for the tests and the type check.",
   "scripts": {
-    "test": "node --test \"test/*.test.js\""
+    "test": "node --test \"test/*.test.js\"",
+    "typecheck": "tsc -p ."
   },
   "devDependencies": {
-    "moment": "2.31.0"
+    "@codemirror/state": "6.7.6",
+    "@codemirror/view": "6.43.13",
+    "moment": "2.31.0",
+    "obsidian": "1.14.4",
+    "typescript": "7.0.2"
   },
   "engines": {
     "node": ">=24"

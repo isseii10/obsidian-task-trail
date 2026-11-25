@@ -18,6 +18,7 @@ jobs:
 
       - run: npm ci
       - run: node --check main.js
+      - run: npm run typecheck
       - run: npm test
 
       # A release is made from a tag named after manifest.json's version (see README), so they must match

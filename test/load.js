@@ -13,6 +13,7 @@ const stubs = {
     Setting: class {},
     MarkdownView: class {},
     Notice: class {},
+    TFile: class {},
     moment,
   },
   "@codemirror/view": { EditorView: {} },

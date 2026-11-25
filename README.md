@@ -35,12 +35,13 @@ Add `isseii10/obsidian-todo-state` in [BRAT](https://github.com/TfTHacker/obsidi
 
 ## Development
 
-The plugin is `main.js` itself and needs no build. The tests check the line editing (cycling, stamping, clearing) with Node's test runner. `test/cases.json` lists the cases as input and expected output.
+The plugin is `main.js` itself and needs no build. It is type-checked with TypeScript (`// @ts-check` and JSDoc, against the `obsidian` type definitions) without being compiled. The tests check the line editing (cycling, stamping, clearing) with Node's test runner. `test/cases.json` lists the cases as input and expected output.
 
 Use the same Node as Obsidian (24, pinned in `mise.toml`).
 
 ```sh
-npm install   # only moment, for the tests
+npm install        # dev tools only: moment, typescript and type definitions
+npm run typecheck
 npm test
 ```
 

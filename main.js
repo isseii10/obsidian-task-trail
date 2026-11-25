@@ -1,3 +1,4 @@
+// @ts-check
 /* TODO State: cycle task checkboxes and stamp times, matching the author's Neovim (obsidian.nvim) setup.
    - Clicking a checkbox (Live Preview, Reading view) or running the command moves the task to the next state
      in the cycle. By default: [ ] -> [~] -> [x] -> [-] -> [ ]
@@ -7,12 +8,22 @@
      removed when a task goes back to [ ]
    - The states and their order, the marks, the time format and click interception are configurable
    Written in plain JavaScript (CommonJS) so that it runs without a build step. */
-const { Plugin, PluginSettingTab, Setting, MarkdownView, Notice, moment } = require("obsidian");
+const { Plugin, PluginSettingTab, Setting, MarkdownView, Notice, TFile, moment: obsidianMoment } = require("obsidian");
 const { EditorView } = require("@codemirror/view");
+
+// obsidian.d.ts types `moment` as the module namespace, which is not callable under TypeScript's module
+// interop. At runtime it is the moment function itself
+const moment = /** @type {typeof import("moment")} */ (/** @type {unknown} */ (obsidianMoment));
+
+/** @typedef {{ symbol: string, mark: string }} State A checkbox state: the character between the brackets,
+    and the mark added with the time when a task switches to it ("" = no time) */
+/** @typedef {{ states: State[], dateFormat: string, clearOnUncheck: boolean,
+    interceptLivePreview: boolean, interceptReading: boolean }} Settings */
 
 // `u` so that a state can be any single character, including ones outside the BMP
 const TASK = /^(\s*(?:[-*+]|\d+[.)]) \[)(.)(\])/u;
 
+/** @type {Settings} */
 const DEFAULT_SETTINGS = {
   // The cycle, in order. `mark` is added with the time when a task switches to that state ("" = no time).
   // 🛫 and ✅ are the same emoji as the Tasks plugin's start and done dates
@@ -31,7 +42,10 @@ const DEFAULT_SETTINGS = {
 /** Length of the time at the start of `rest` (the text after a mark, leading whitespace already skipped),
     or 0 if it does not start with a time. The longest prefix that parses with the format counts. Failing
     that, a run of digit groups (digits and - / . :, separated by spaces) counts, so that times written in an
-    earlier format, and incomplete ones, are recognized as a whole */
+    earlier format, and incomplete ones, are recognized as a whole
+    @param {string} rest
+    @param {string} format
+    @returns {number} */
 function timeLength(rest, format) {
   for (let k = Math.min(rest.length, 64); k > 0; k--) {
     if (moment(rest.slice(0, k), format, true).isValid()) return k;
@@ -41,7 +55,12 @@ function timeLength(rest, format) {
 }
 
 /** Remove every "mark time" of the given marks from `from` on. A mark not followed by a time is left alone,
-    since it may be ordinary text */
+    since it may be ordinary text
+    @param {string} line
+    @param {string[]} marks
+    @param {string} format
+    @param {number} from
+    @returns {string} */
 function clearStamps(line, marks, format, from) {
   for (const mark of new Set(marks.filter(Boolean))) {
     let i = line.indexOf(mark, from);
@@ -68,7 +87,13 @@ function clearStamps(line, marks, format, from) {
     - If only the mark is left (its time was deleted), insert the time right after that mark
     - If the mark is missing, append "mark time" to the end of the line
     Only the text from `from` on (after the checkbox) is searched, so a mark equal to the state symbol is not
-    mistaken for one. `now` is a moment */
+    mistaken for one
+    @param {string} line
+    @param {string} mark
+    @param {string} format
+    @param {number} from
+    @param {import("moment").Moment} now
+    @returns {string} */
 function stamp(line, mark, format, from, now) {
   const time = now.format(format);
   let orphan = -1;
@@ -85,7 +110,11 @@ function stamp(line, mark, format, from, now) {
 
 /** Return the line switched to the next state, or null if it is not a task line.
     A task whose state is not in the cycle goes to the first state. No time is added for a state whose
-    mark is empty. `now` (a moment) is the time to stamp, so that tests can fix it */
+    mark is empty. `now` is the time to stamp, so that tests can fix it
+    @param {string} line
+    @param {Settings} settings
+    @param {import("moment").Moment} [now]
+    @returns {string | null} */
 function nextLine(line, settings, now = moment()) {
   const m = line.match(TASK);
   if (!m) return null;
@@ -100,7 +129,11 @@ function nextLine(line, settings, now = moment()) {
   return next.mark ? stamp(out, next.mark, format, head.length, now) : out;
 }
 
-/** Why a state symbol cannot be used, or null if it can */
+/** Why a state symbol cannot be used, or null if it can
+    @param {string} symbol
+    @param {State[]} states
+    @param {number} index the state being edited, which may keep its own symbol
+    @returns {string | null} */
 function symbolError(symbol, states, index) {
   if ([...symbol].length !== 1) return "Use exactly one character";
   if (symbol === "[" || symbol === "]") return "Brackets cannot be used";
@@ -114,6 +147,7 @@ class TodoStatePlugin extends Plugin {
     this.addSettingTab(new TodoStateSettingTab(this.app, this));
 
     // Remember which rendered section each Reading view checkbox belongs to, to find its line on click
+    /** @type {WeakMap<Element, { el: HTMLElement, ctx: import("obsidian").MarkdownPostProcessorContext }>} */
     this.reading = new WeakMap();
     this.registerMarkdownPostProcessor((el, ctx) => {
       el.querySelectorAll("input.task-list-item-checkbox").forEach((input) => {
@@ -124,6 +158,7 @@ class TodoStatePlugin extends Plugin {
     // Catch the event before Obsidian's own toggle ([ ] <-> [x]) and stop it. Stop mousedown too, in case
     // Obsidian toggles on mousedown. Where interception is turned off, do nothing and leave the click to
     // Obsidian (and other plugins)
+    /** @param {MouseEvent} evt */
     const onCheckbox = (evt) => {
       const target = evt.target;
       if (!(target instanceof HTMLInputElement) || !target.matches("input.task-list-item-checkbox")) return;
@@ -165,6 +200,7 @@ class TodoStatePlugin extends Plugin {
     }
     delete data.stampInProgress;
     delete data.stampDone;
+    /** @type {Settings} */
     this.settings = Object.assign({}, DEFAULT_SETTINGS, data);
     if (!Array.isArray(this.settings.states) || this.settings.states.length < 2) {
       this.settings.states = DEFAULT_SETTINGS.states;
@@ -177,10 +213,11 @@ class TodoStatePlugin extends Plugin {
     await this.saveData(this.settings);
   }
 
+  /** @param {HTMLInputElement} input */
   cycleFromCheckbox(input) {
     // Live Preview: get the line from CodeMirror. findFromDOM only finds the editor from its outer element
     // (.cm-editor), so walk up from the checkbox
-    const editorEl = input.closest(".cm-editor");
+    const editorEl = /** @type {HTMLElement | null} */ (input.closest(".cm-editor"));
     const cm = editorEl && EditorView.findFromDOM(editorEl);
     if (cm) {
       const line = cm.state.doc.lineAt(cm.posAtDOM(input));
@@ -190,7 +227,7 @@ class TodoStatePlugin extends Plugin {
       // Because the click was preventDefault-ed, the browser restores `checked` to its pre-click value
       // after this handler. Obsidian may reuse the same input, which would then keep the stale value and
       // break :checked styling, so set it to match the new state once the browser is done
-      const checked = updated.match(TASK)[2] !== " ";
+      const checked = updated.match(TASK)?.[2] !== " ";
       setTimeout(() => {
         if (input.isConnected) input.checked = checked;
       });
@@ -199,10 +236,12 @@ class TodoStatePlugin extends Plugin {
 
     // Reading view: the file line is the section's first line plus the li's data-line
     const entry = this.reading.get(input);
-    const li = input.closest("li[data-line]");
+    const li = /** @type {HTMLElement | null} */ (input.closest("li[data-line]"));
     const info = entry && entry.ctx.getSectionInfo(entry.el);
     const view = this.app.workspace.getActiveViewOfType(MarkdownView);
-    const file = (view && view.file) || (entry && this.app.vault.getFileByPath(entry.ctx.sourcePath));
+    // getAbstractFileByPath rather than getFileByPath, which needs Obsidian 1.5.7 (minAppVersion is 1.4.0)
+    const source = entry && this.app.vault.getAbstractFileByPath(entry.ctx.sourcePath);
+    const file = (view && view.file) || (source instanceof TFile ? source : null);
     if (!li || !info || !file) {
       new Notice("TODO State: cannot toggle the checkbox at this position");
       return;
@@ -219,6 +258,10 @@ class TodoStatePlugin extends Plugin {
 }
 
 class TodoStateSettingTab extends PluginSettingTab {
+  /**
+   * @param {import("obsidian").App} app
+   * @param {TodoStatePlugin} plugin
+   */
   constructor(app, plugin) {
     super(app, plugin);
     this.plugin = plugin;
@@ -245,6 +288,7 @@ class TodoStateSettingTab extends PluginSettingTab {
       .setHeading();
 
     const states = s.states;
+    /** @param {number} from @param {number} to */
     const move = async (from, to) => {
       states.splice(to, 0, states.splice(from, 1)[0]);
       await save();
@@ -384,6 +428,7 @@ class TodoStateSettingTab extends PluginSettingTab {
   }
 }
 
-module.exports = TodoStatePlugin;
-// The line-editing functions, for the tests (test/). Obsidian only uses the class itself
-module.exports.internals = { nextLine, stamp, clearStamps, timeLength, symbolError, DEFAULT_SETTINGS };
+// `internals`: the line-editing functions, for the tests (test/). Obsidian only uses the class itself
+module.exports = Object.assign(TodoStatePlugin, {
+  internals: { nextLine, stamp, clearStamps, timeLength, symbolError, DEFAULT_SETTINGS },
+});
