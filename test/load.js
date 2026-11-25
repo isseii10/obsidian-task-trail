@@ -1,7 +1,7 @@
 // Load main.js outside Obsidian. "obsidian" and "@codemirror/view" only exist inside the app, so they are
 // replaced with stubs; moment is the real one, because the time checks depend on its strict parsing.
-// It is one version ahead of the one Obsidian 1.15.1 bundles (2.30.1), for a security fix that does not
-// touch formatting or parsing.
+// It is 2.31.0 (for GHSA-4p3w-j4w9-5jqw), while Obsidian 1.15.1 bundles 2.30.1. 2.31.0 also changes
+// internals such as validity checks, so the cases were also run inside Obsidian with 2.30.1 (all pass).
 const Module = require("node:module");
 const path = require("node:path");
 const moment = require("moment");
