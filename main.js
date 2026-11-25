@@ -1,5 +1,5 @@
 // @ts-check
-/* TODO State: cycle task checkboxes and stamp times.
+/* Task Trail: cycle task checkboxes and stamp times.
    - Clicking a checkbox (Live Preview, Reading view) or running the command moves the task to the next state
      in the cycle. By default: [ ] -> [~] -> [x] -> [-] -> [ ]
    - A state can have a mark: switching to it appends "<mark> <time>" (not added again if the mark already
@@ -25,7 +25,7 @@ const moment = /** @type {typeof import("moment")} */ (/** @type {unknown} */ (o
     interceptLivePreview: boolean, interceptReading: boolean, checkboxStyles: boolean }} Settings */
 
 // The class on <body> that turns on styles.css, so that the styles can be switched off from the settings
-const STYLES_CLASS = "todo-state-checkboxes";
+const STYLES_CLASS = "task-trail-checkboxes";
 
 // `u` so that a state can be any single character, including ones outside the BMP
 const TASK = /^(\s*(?:[-*+]|\d+[.)]) \[)(.)(\])/u;
@@ -254,11 +254,11 @@ function sanitizeSettings(raw) {
   };
 }
 
-class TodoStatePlugin extends Plugin {
+class TaskTrailPlugin extends Plugin {
   async onload() {
     await this.loadSettings();
     this.applyStyles();
-    this.addSettingTab(new TodoStateSettingTab(this.app, this));
+    this.addSettingTab(new TaskTrailSettingTab(this.app, this));
 
     // Remember which rendered section each Reading view checkbox belongs to, to find its line on click
     /** @type {WeakMap<Element, { el: HTMLElement, ctx: import("obsidian").MarkdownPostProcessorContext }>} */
@@ -314,7 +314,7 @@ class TodoStatePlugin extends Plugin {
     /** @type {Settings} */
     this.settings = settings;
     if (ignored.length > 0) {
-      new Notice(`TODO State: ignored invalid settings in data.json: ${ignored.join(", ")}`, 0);
+      new Notice(`Task Trail: ignored invalid settings in data.json: ${ignored.join(", ")}`, 0);
     }
     // Write back only the 0.2.0 development format, so that data.json is not rewritten behind the user's back
     // when it only has invalid values (they stay in the file to be fixed by hand)
@@ -366,7 +366,7 @@ class TodoStatePlugin extends Plugin {
     const source = entry ? this.app.vault.getAbstractFileByPath(entry.ctx.sourcePath) : null;
     const file = view?.file ?? (source instanceof TFile ? source : null);
     if (!li || !info || !file) {
-      new Notice("TODO State: cannot toggle the checkbox at this position");
+      new Notice("Task Trail: cannot toggle the checkbox at this position");
       return;
     }
     const n = info.lineStart + Number(li.dataset.line);
@@ -380,10 +380,10 @@ class TodoStatePlugin extends Plugin {
   }
 }
 
-class TodoStateSettingTab extends PluginSettingTab {
+class TaskTrailSettingTab extends PluginSettingTab {
   /**
    * @param {import("obsidian").App} app
-   * @param {TodoStatePlugin} plugin
+   * @param {TaskTrailPlugin} plugin
    */
   constructor(app, plugin) {
     super(app, plugin);
@@ -580,6 +580,6 @@ class TodoStateSettingTab extends PluginSettingTab {
 }
 
 // `internals`: the line-editing functions, for the tests (test/). Obsidian only uses the class itself
-module.exports = Object.assign(TodoStatePlugin, {
+module.exports = Object.assign(TaskTrailPlugin, {
   internals: { nextLine, stamp, clearStamps, timeLength, sanitizeSettings, DEFAULT_SETTINGS },
 });

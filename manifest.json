@@ -1,7 +1,7 @@
 {
-  "id": "todo-state",
-  "name": "TODO State",
-  "description": "Cycle checkboxes through [ ] → [~] → [x] → [-] and stamp start and done times at the end of the line.",
+  "id": "task-trail",
+  "name": "Task Trail",
+  "description": "Leave a trail of when each task was started, finished or dropped: click a checkbox to move it to its next state, and the time is stamped on the line.",
   "version": "0.2.0",
   "author": "isseii10",
   "isDesktopOnly": false,

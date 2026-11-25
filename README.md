@@ -1,8 +1,8 @@
-# TODO State
+# Task Trail
 
-An Obsidian plugin that cycles task checkboxes through states (by default `[ ]` → `[~]` → `[x]` → `[-]` → `[ ]`) and stamps start and done times at the end of the line.
+An Obsidian plugin that leaves a trail of when each task was started, finished or dropped. Click a checkbox to move the task to its next state (by default `[ ]` → `[~]` → `[x]` → `[-]` → `[ ]`), and the time is stamped at the end of the line.
 
-- Cycle by clicking a checkbox (Live Preview and Reading view) or with the command "TODO State: Cycle checkbox state"
+- Cycle by clicking a checkbox (Live Preview and Reading view) or with the command "Task Trail: Cycle checkbox state"
 - By default, switching to `[~]` appends `🛫 YYYY-MM-DD HH:mm`, and switching to `[x]` appends `✅ YYYY-MM-DD HH:mm` (the same emoji as the start and done dates of the [Tasks](https://github.com/obsidian-tasks-group/obsidian-tasks) plugin)
   - If the mark is already followed by a time, nothing is added, so cycling repeatedly never adds duplicates
   - If only the mark is left (its time was deleted), the time is inserted right after that mark
@@ -10,7 +10,7 @@ An Obsidian plugin that cycles task checkboxes through states (by default `[ ]` 
 
 ## Scope
 
-This plugin does one thing: it moves a task through its checkbox states and records when that happened.
+This plugin has one purpose: a record of when, and how far, each task progressed. Cycling the checkbox and stamping the time are the two halves of that, and it does nothing beyond them.
 
 - **The cycle only.** It offers only states that a task moves through (to do, in progress, done) and how a task ends (cancelled, forwarded, scheduled). Markers that say nothing about progress, such as `[!]` important, `[*]` star or `[?]` question, are left to themes and other plugins.
 - **Times are records.** A stamp records when a state was reached, so only marks that mean "this happened at this time" are offered. Stamps are never removed unless you turn that on, because a misclick must not lose a record.
@@ -20,7 +20,7 @@ This plugin does one thing: it moves a task through its checkbox states and reco
 
 ## Settings
 
-Open Settings → Community plugins → TODO State. The defaults give the behavior described above.
+Open Settings → Community plugins → Task Trail. The defaults give the behavior described above.
 
 | Setting | Default | Description |
 | --- | --- | --- |
@@ -58,7 +58,7 @@ Obsidian draws the checkbox of every state other than `[ ]` like `[x]`, and stri
 
 ## Installation
 
-Add `isseii10/obsidian-todo-state` in [BRAT](https://github.com/TfTHacker/obsidian42-brat).
+Add `isseii10/obsidian-task-trail` in [BRAT](https://github.com/TfTHacker/obsidian42-brat).
 
 ## Development
 
