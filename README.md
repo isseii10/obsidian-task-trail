@@ -81,3 +81,7 @@ Bump `version` in `manifest.json`, create a release with a tag of the same name,
 ```sh
 gh release create X.Y.Z main.js manifest.json styles.css --title X.Y.Z --notes "..."
 ```
+
+## License
+
+[MIT](LICENSE)

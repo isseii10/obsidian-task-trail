@@ -1,6 +1,7 @@
 {
   "name": "obsidian-task-trail",
   "private": true,
+  "license": "MIT",
   "description": "Development only: the plugin itself is main.js and needs no build. This file is for the tests and the type check.",
   "scripts": {
     "test": "node --test \"test/*.test.js\"",
