@@ -18,4 +18,4 @@
    - Copy `main.js`, `manifest.json` and `styles.css` to the vault's `.obsidian/plugins/task-trail/`. Ask the user for the vault if you do not know it.
    - Run `obsidian plugin:reload id=task-trail`, then drive the app with `obsidian eval`.
    - Put back any note you edit while testing, and confirm it matches what was there before.
-   - The author's vault syncs this plugin folder to their phone through the vault's git, so a test copy reaches the phone once the vault is committed. Tell the user when the vault holds an unreleased build.
+   - The author installs releases with BRAT on each device (their vault sync skips `.obsidian/plugins/`), so a test copy stays on this machine, and BRAT's update at startup may replace it with the latest release.
