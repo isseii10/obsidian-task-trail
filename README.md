@@ -1,40 +1,40 @@
 # TODO State
 
-Obsidian のチェックボックスを `[ ]` → `[~]` → `[x]` → `[-]` → `[ ]` の順に切り替え、着手・完了の時刻を行末に付けるプラグイン。Neovim（obsidian.nvim）側の設定と同じ動きにするために作った。
+An Obsidian plugin that cycles task checkboxes through `[ ]` → `[~]` → `[x]` → `[-]` → `[ ]` and stamps start and done times at the end of the line. It was made to match the author's Neovim (obsidian.nvim) setup.
 
-- クリック（Live Preview・Reading）と、コマンド「TODO State: Cycle checkbox state」で切り替える
-- `[~]` にすると `󱓞 YYYY-MM-DD HH:mm`、`[x]` にすると `󰈼 YYYY-MM-DD HH:mm` を行末に付ける
-  - 印の後に時刻があれば付けない（何度切り替えても増えない）
-  - 印だけ残っていれば（時刻を消した）、その印のすぐ後に時刻を補う
-- 時刻は自動では消さない。やり直すときは印ごと消す（時刻だけ残して印を消すと、新しい「印 時刻」が行末に付き、時刻が2つ並ぶ）
+- Cycle by clicking a checkbox (Live Preview and Reading view) or with the command "TODO State: Cycle checkbox state"
+- Switching to `[~]` appends `󱓞 YYYY-MM-DD HH:mm`, and switching to `[x]` appends `󰈼 YYYY-MM-DD HH:mm`
+  - If the mark is already followed by a time, nothing is added, so cycling repeatedly never adds duplicates
+  - If only the mark is left (its time was deleted), the time is inserted right after that mark
+- Times are never removed automatically. To redo one, delete the mark together with its time (if you delete only the mark and keep the time, a new "mark time" is appended and you end up with two times)
 
-デフォルトの印は Nerd Font の文字なので、Nerd Font がない環境では豆腐（□）になる。その場合は設定で絵文字などに変える。
+The default marks are Nerd Font glyphs and show up as boxes (tofu) without a Nerd Font. In that case, switch to emoji or other marks in the settings.
 
-## 設定
+## Settings
 
-設定 → コミュニティプラグイン → TODO State で変えられる。デフォルトは上に書いた動き（Neovim 側と同じ）。
+Open Settings → Community plugins → TODO State. The defaults give the behavior described above.
 
-| 設定 | デフォルト | 説明 |
+| Setting | Default | Description |
 | --- | --- | --- |
-| プリセット | Nerd Font | 印をまとめて選ぶ。Nerd Font（`󱓞` / `󰈼`）か絵文字（`🛫` / `✅`）。下の印を手で変えると「カスタム」になる |
-| 着手 `[~]` の印 | `󱓞` | `[~]` にしたとき時刻の前に付ける文字。空にすると `[~]` では時刻を付けない |
-| 完了 `[x]` の印 | `󰈼` | `[x]` にしたとき時刻の前に付ける文字。空にすると `[x]` では時刻を付けない |
-| 時刻の書式 | `YYYY-MM-DD HH:mm` | [moment.js の書式](https://momentjs.com/docs/#/displaying/format/)。空にするとデフォルトに戻る |
-| クリックの横取り: Live Preview | オン | オフにすると、Live Preview のチェックボックスのクリックは本体（や Tasks など他のプラグイン）の標準動作になる |
-| クリックの横取り: Reading | オン | 同じく Reading view 用 |
+| Preset | Nerd Font | Sets both marks at once: Nerd Font (`󱓞` / `󰈼`) or Emoji (`🛫` / `✅`). Editing a mark by hand switches this to "Custom" |
+| In progress `[~]` mark | `󱓞` | Added before the time when a task becomes `[~]`. Leave empty to add no time for `[~]` |
+| Done `[x]` mark | `󰈼` | Added before the time when a task becomes `[x]`. Leave empty to add no time for `[x]` |
+| Time format | `YYYY-MM-DD HH:mm` | A [moment.js format](https://momentjs.com/docs/#/displaying/format/). Empty resets it to the default |
+| Checkbox clicks: Live Preview | On | When off, clicking a checkbox in Live Preview gets Obsidian's default behavior (or another plugin's, such as Tasks) |
+| Checkbox clicks: Reading view | On | The same for Reading view |
 
-- 「時刻が付いているか」の判定は、設定した印で行う。印の後（空白は飛ばす）が数字で始まるか、設定した書式として読めれば「付いている」とみなす。数字で始まれば付いているとみなすので、書式を変えても前の書式の時刻に二重には付かない
-- 印を変えると、前の印が付いた行にも新しい印で時刻が付く
-- クリックの横取りをオフにしても、コマンド「Cycle checkbox state」はいつでも使える（ホットキーを割り当てると便利）
-- クリックの横取りは `document` の `mousedown` / `click` を capture で止めて行うので、Tasks などチェックボックスのクリックを扱う他のプラグインとはぶつかる。併用するときはオフにする
+- Whether a line already has a time is checked using the configured marks: a mark counts as stamped when the text after it (ignoring spaces) starts with a digit or parses with the configured format. Because anything starting with a digit counts, changing the format does not add a second time to lines stamped in the old format
+- After changing a mark, lines that only have the old mark get a new stamp with the new mark
+- The command "Cycle checkbox state" works even with checkbox clicks turned off (assigning it a hotkey is handy)
+- Checkbox clicks are handled by stopping `mousedown` / `click` on `document` in the capture phase, so they conflict with other plugins that handle checkbox clicks, such as Tasks. Turn them off when using such a plugin
 
-## インストール
+## Installation
 
-[BRAT](https://github.com/TfTHacker/obsidian42-brat) で `isseii10/obsidian-todo-state` を追加する。
+Add `isseii10/obsidian-todo-state` in [BRAT](https://github.com/TfTHacker/obsidian42-brat).
 
-## リリース
+## Releasing
 
-`manifest.json` の `version` を上げ、同じ名前のタグでリリースを作り、`main.js` と `manifest.json` を添付する。
+Bump `version` in `manifest.json`, create a release with a tag of the same name, and attach `main.js` and `manifest.json`.
 
 ```sh
 gh release create X.Y.Z main.js manifest.json --title X.Y.Z --notes "..."

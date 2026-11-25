@@ -1,10 +1,11 @@
-/* TODO State: チェックボックスの状態の切り替えと時刻の付与を、Neovim（dotfiles の
-   nvim/lua/user/extras/obsidian.lua）と同じ動きにする。
-   - クリック（Live Preview・Reading）とコマンドで [ ]→[~]→[x]→[-]→[ ] の順に切り替える
-   - [~] にしたら「<着手の印> <時刻>」、[x] にしたら「<完了の印> <時刻>」を行末に付ける（同じ印が既にあれば付けない）
-   - 時刻は自動では消さない（誤操作で記録を失わないため。やり直すときは手で消す）
-   - 印・時刻の書式・クリックの横取りは設定で変えられる。デフォルトは Neovim 側と同じ
-   ビルドなしで動くように、素の JavaScript（CommonJS）で書いている。 */
+/* TODO State: cycle task checkboxes and stamp start/done times, matching the author's Neovim
+   (obsidian.nvim) setup.
+   - Clicking a checkbox (Live Preview, Reading view) or running the command cycles [ ] -> [~] -> [x] -> [-] -> [ ]
+   - Switching to [~] appends "<in-progress mark> <time>", switching to [x] appends "<done mark> <time>"
+     (not added again if the mark already has a time)
+   - Times are never removed automatically, so a misclick never loses a record. Remove them by hand to redo
+   - The marks, the time format and click interception are configurable. Defaults match the Neovim setup
+   Written in plain JavaScript (CommonJS) so that it runs without a build step. */
 const { Plugin, PluginSettingTab, Setting, MarkdownView, Notice, moment } = require("obsidian");
 const { EditorView } = require("@codemirror/view");
 
@@ -12,8 +13,8 @@ const ORDER = [" ", "~", "x", "-"];
 const TASK = /^(\s*(?:[-*+]|\d+[.)]) \[)(.)(\])/;
 
 const PRESETS = {
-  nerd: { name: "Nerd Font（󱓞 / 󰈼）", inProgress: "󱓞", done: "󰈼" },
-  emoji: { name: "絵文字（🛫 / ✅）", inProgress: "🛫", done: "✅" },
+  nerd: { name: "Nerd Font (󱓞 / 󰈼)", inProgress: "󱓞", done: "󰈼" },
+  emoji: { name: "Emoji (🛫 / ✅)", inProgress: "🛫", done: "✅" },
 };
 
 const DEFAULT_SETTINGS = {
@@ -24,8 +25,9 @@ const DEFAULT_SETTINGS = {
   interceptReading: true,
 };
 
-/** 印の後ろ（空白を飛ばした先）が時刻か。数字で始まれば時刻とみなす（書式を変える前の時刻も含めるため）。
-    数字で始まらない書式（MMM D など）は、書式どおりに読めるかで見る */
+/** Whether the text after a mark (leading whitespace already skipped) is a time.
+    Anything starting with a digit counts, so times written in an earlier format still count.
+    For formats that do not start with a digit (e.g. MMM D), check whether it parses with the format */
 function startsWithTime(rest, format) {
   if (/^\d/.test(rest)) return true;
   for (let k = Math.min(rest.length, 64); k > 0; k--) {
@@ -34,10 +36,10 @@ function startsWithTime(rest, format) {
   return false;
 }
 
-/** 行に「印＋時刻」を付ける。
-    - 印の後に時刻があれば、付いているので何もしない
-    - 印だけ残っていれば（時刻を消した）、その印のすぐ後に時刻を補う
-    - 印がなければ、行末に「印 時刻」を付ける */
+/** Add "mark time" to a line.
+    - If the mark is followed by a time, it is already stamped: leave the line as is
+    - If only the mark is left (its time was deleted), insert the time right after that mark
+    - If the mark is missing, append "mark time" to the end of the line */
 function stamp(line, mark, format) {
   const time = moment().format(format);
   let orphan = -1;
@@ -52,8 +54,8 @@ function stamp(line, mark, format) {
   return line.slice(0, end) + " " + time + (rest ? " " + rest : "");
 }
 
-/** 1行を次の状態にした行を返す。タスク行でなければ null。
-    印が空の状態では時刻を付けない */
+/** Return the line switched to the next state, or null if it is not a task line.
+    No time is added for a state whose mark is empty */
 function nextLine(line, settings) {
   const m = line.match(TASK);
   if (!m) return null;
@@ -68,7 +70,7 @@ module.exports = class TodoStatePlugin extends Plugin {
     await this.loadSettings();
     this.addSettingTab(new TodoStateSettingTab(this.app, this));
 
-    // Reading view のチェックボックス → 描画元（セクション）を覚えておき、クリック時に行番号を出す
+    // Remember which rendered section each Reading view checkbox belongs to, to find its line on click
     this.reading = new WeakMap();
     this.registerMarkdownPostProcessor((el, ctx) => {
       el.querySelectorAll("input.task-list-item-checkbox").forEach((input) => {
@@ -76,8 +78,9 @@ module.exports = class TodoStatePlugin extends Plugin {
       });
     });
 
-    // 本体の切り替え（[ ]⇔[x]）より先に拾って止める。本体が mousedown で切り替える場合に備えて両方止める。
-    // 設定で横取りをオフにした表示では何もせず、本体（と他のプラグイン）の動作に任せる
+    // Catch the event before Obsidian's own toggle ([ ] <-> [x]) and stop it. Stop mousedown too, in case
+    // Obsidian toggles on mousedown. Where interception is turned off, do nothing and leave the click to
+    // Obsidian (and other plugins)
     const onCheckbox = (evt) => {
       const target = evt.target;
       if (!(target instanceof HTMLInputElement) || !target.matches("input.task-list-item-checkbox")) return;
@@ -117,8 +120,8 @@ module.exports = class TodoStatePlugin extends Plugin {
   }
 
   cycleFromCheckbox(input) {
-    // Live Preview / Source: CodeMirror から行を取る。findFromDOM はエディタの外側の要素（.cm-editor）を
-    // 渡さないと見つけられないので、チェックボックスから辿る
+    // Live Preview: get the line from CodeMirror. findFromDOM only finds the editor from its outer element
+    // (.cm-editor), so walk up from the checkbox
     const editorEl = input.closest(".cm-editor");
     const cm = editorEl && EditorView.findFromDOM(editorEl);
     if (cm) {
@@ -126,9 +129,9 @@ module.exports = class TodoStatePlugin extends Plugin {
       const updated = nextLine(line.text, this.settings);
       if (updated === null) return;
       cm.dispatch({ changes: { from: line.from, to: line.to, insert: updated } });
-      // click を preventDefault したので、ブラウザはこの後で checked をクリック前の値に戻す。
-      // Obsidian は同じ input を使い回すことがあり、戻された値のまま残って CSS（:checked）がずれるので、
-      // 戻された後で新しい状態に合わせ直す
+      // Because the click was preventDefault-ed, the browser restores `checked` to its pre-click value
+      // after this handler. Obsidian may reuse the same input, which would then keep the stale value and
+      // break :checked styling, so set it to match the new state once the browser is done
       const checked = updated.match(TASK)[2] !== " ";
       setTimeout(() => {
         if (input.isConnected) input.checked = checked;
@@ -136,14 +139,14 @@ module.exports = class TodoStatePlugin extends Plugin {
       return;
     }
 
-    // Reading view: セクションの開始行＋ li の data-line で、ファイルの行を出す
+    // Reading view: the file line is the section's first line plus the li's data-line
     const entry = this.reading.get(input);
     const li = input.closest("li[data-line]");
     const info = entry && entry.ctx.getSectionInfo(entry.el);
     const view = this.app.workspace.getActiveViewOfType(MarkdownView);
     const file = (view && view.file) || (entry && this.app.vault.getFileByPath(entry.ctx.sourcePath));
     if (!li || !info || !file) {
-      new Notice("TODO State: この位置のチェックボックスは切り替えられない");
+      new Notice("TODO State: cannot toggle the checkbox at this position");
       return;
     }
     const n = info.lineStart + Number(li.dataset.line);
@@ -169,18 +172,18 @@ class TodoStateSettingTab extends PluginSettingTab {
     const save = () => this.plugin.saveSettings();
     containerEl.empty();
 
-    new Setting(containerEl).setName("時刻の印").setHeading();
+    new Setting(containerEl).setName("Marks").setHeading();
 
     const presetOf = () =>
       Object.keys(PRESETS).find((k) => PRESETS[k].inProgress === s.stampInProgress && PRESETS[k].done === s.stampDone) ||
       "custom";
     let dropdown;
     new Setting(containerEl)
-      .setName("プリセット")
-      .setDesc("選ぶと下の2つの印に入る。Nerd Font がない環境では絵文字にする")
+      .setName("Preset")
+      .setDesc("Fills in both marks below. Choose Emoji if you do not have a Nerd Font installed.")
       .addDropdown((d) => {
         for (const [k, p] of Object.entries(PRESETS)) d.addOption(k, p.name);
-        d.addOption("custom", "カスタム");
+        d.addOption("custom", "Custom");
         d.setValue(presetOf());
         dropdown = d;
         d.onChange(async (k) => {
@@ -193,8 +196,8 @@ class TodoStateSettingTab extends PluginSettingTab {
       });
 
     new Setting(containerEl)
-      .setName("着手 [~] の印")
-      .setDesc("空にすると [~] では時刻を付けない")
+      .setName("In progress [~] mark")
+      .setDesc("Added before the time when a task becomes [~]. Leave empty to add no time for [~].")
       .addText((t) =>
         t.setValue(s.stampInProgress).onChange(async (v) => {
           s.stampInProgress = v.trim();
@@ -204,8 +207,8 @@ class TodoStateSettingTab extends PluginSettingTab {
       );
 
     new Setting(containerEl)
-      .setName("完了 [x] の印")
-      .setDesc("空にすると [x] では時刻を付けない")
+      .setName("Done [x] mark")
+      .setDesc("Added before the time when a task becomes [x]. Leave empty to add no time for [x].")
       .addText((t) =>
         t.setValue(s.stampDone).onChange(async (v) => {
           s.stampDone = v.trim();
@@ -214,11 +217,11 @@ class TodoStateSettingTab extends PluginSettingTab {
         }),
       );
 
-    new Setting(containerEl).setName("時刻の書式").setHeading();
+    new Setting(containerEl).setName("Time").setHeading();
 
-    const fmt = new Setting(containerEl).setName("書式");
+    const fmt = new Setting(containerEl).setName("Time format");
     const preview = () => {
-      fmt.setDesc("moment.js の書式。今の時刻だと: " + moment().format(s.dateFormat || DEFAULT_SETTINGS.dateFormat));
+      fmt.setDesc("A moment.js format. Current time: " + moment().format(s.dateFormat || DEFAULT_SETTINGS.dateFormat));
     };
     fmt.addMomentFormat((m) =>
       m
@@ -233,13 +236,15 @@ class TodoStateSettingTab extends PluginSettingTab {
     preview();
 
     new Setting(containerEl)
-      .setName("クリックの横取り")
-      .setDesc("オフにした表示では、クリックは本体（や Tasks など他のプラグイン）の標準動作になる。コマンドはいつでも使える")
+      .setName("Checkbox clicks")
+      .setDesc(
+        "Where this is off, clicks get Obsidian's default behavior (or another plugin's, such as Tasks). The command always works.",
+      )
       .setHeading();
 
     new Setting(containerEl)
       .setName("Live Preview")
-      .setDesc("Live Preview のチェックボックスのクリックで状態を切り替える")
+      .setDesc("Cycle the state when a checkbox is clicked in Live Preview.")
       .addToggle((t) =>
         t.setValue(s.interceptLivePreview).onChange(async (v) => {
           s.interceptLivePreview = v;
@@ -248,8 +253,8 @@ class TodoStateSettingTab extends PluginSettingTab {
       );
 
     new Setting(containerEl)
-      .setName("Reading")
-      .setDesc("Reading view のチェックボックスのクリックで状態を切り替える")
+      .setName("Reading view")
+      .setDesc("Cycle the state when a checkbox is clicked in Reading view.")
       .addToggle((t) =>
         t.setValue(s.interceptReading).onChange(async (v) => {
           s.interceptReading = v;
