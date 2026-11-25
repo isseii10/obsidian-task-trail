@@ -1,6 +1,6 @@
 # TODO State
 
-An Obsidian plugin that cycles task checkboxes through states (by default `[ ]` → `[~]` → `[x]` → `[-]` → `[ ]`) and stamps start and done times at the end of the line. It was made to match the author's Neovim (obsidian.nvim) setup.
+An Obsidian plugin that cycles task checkboxes through states (by default `[ ]` → `[~]` → `[x]` → `[-]` → `[ ]`) and stamps start and done times at the end of the line.
 
 - Cycle by clicking a checkbox (Live Preview and Reading view) or with the command "TODO State: Cycle checkbox state"
 - By default, switching to `[~]` appends `🛫 YYYY-MM-DD HH:mm`, and switching to `[x]` appends `✅ YYYY-MM-DD HH:mm` (the same emoji as the start and done dates of the [Tasks](https://github.com/obsidian-tasks-group/obsidian-tasks) plugin)
@@ -14,7 +14,7 @@ This plugin does one thing: it moves a task through its checkbox states and reco
 
 - **The cycle only.** It offers only states that a task moves through (to do, in progress, done) and how a task ends (cancelled, forwarded, scheduled). Markers that say nothing about progress, such as `[!]` important, `[*]` star or `[?]` question, are left to themes and other plugins.
 - **Times are records.** A stamp records when a state was reached, so only marks that mean "this happened at this time" are offered. Stamps are never removed unless you turn that on, because a misclick must not lose a record.
-- **Plain Markdown.** Everything is written into the line as text, so the note reads the same in any editor. The default behavior matches the author's Neovim setup, which edits the same notes.
+- **Plain Markdown.** Marks and times are written into the line as text, so any editor or tool can read them, and can write them the same way.
 - **No more than that.** Queries, due dates, recurrence and task lists across notes belong to plugins such as [Tasks](https://github.com/obsidian-tasks-group/obsidian-tasks) or Dataview.
 - **Stay out of the way.** Checkbox clicks can be left to Obsidian or another plugin, and the checkbox styles are off by default, so that they do not override your theme or CSS snippets.
 

@@ -1,5 +1,5 @@
 // @ts-check
-/* TODO State: cycle task checkboxes and stamp times, matching the author's Neovim (obsidian.nvim) setup.
+/* TODO State: cycle task checkboxes and stamp times.
    - Clicking a checkbox (Live Preview, Reading view) or running the command moves the task to the next state
      in the cycle. By default: [ ] -> [~] -> [x] -> [-] -> [ ]
    - A state can have a mark: switching to it appends "<mark> <time>" (not added again if the mark already
