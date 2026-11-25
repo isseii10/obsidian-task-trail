@@ -1,21 +1,26 @@
-/* TODO State: cycle task checkboxes and stamp start/done times, matching the author's Neovim
-   (obsidian.nvim) setup.
-   - Clicking a checkbox (Live Preview, Reading view) or running the command cycles [ ] -> [~] -> [x] -> [-] -> [ ]
-   - Switching to [~] appends "<in-progress mark> <time>", switching to [x] appends "<done mark> <time>"
-     (not added again if the mark already has a time)
+/* TODO State: cycle task checkboxes and stamp times, matching the author's Neovim (obsidian.nvim) setup.
+   - Clicking a checkbox (Live Preview, Reading view) or running the command moves the task to the next state
+     in the cycle. By default: [ ] -> [~] -> [x] -> [-] -> [ ]
+   - A state can have a mark: switching to it appends "<mark> <time>" (not added again if the mark already
+     has a time). By default [~] has 🛫 and [x] has ✅
    - Times are never removed automatically, so a misclick never loses a record. Remove them by hand to redo
-   - The marks, the time format and click interception are configurable
+   - The states and their order, the marks, the time format and click interception are configurable
    Written in plain JavaScript (CommonJS) so that it runs without a build step. */
 const { Plugin, PluginSettingTab, Setting, MarkdownView, Notice, moment } = require("obsidian");
 const { EditorView } = require("@codemirror/view");
 
-const ORDER = [" ", "~", "x", "-"];
-const TASK = /^(\s*(?:[-*+]|\d+[.)]) \[)(.)(\])/;
+// `u` so that a state can be any single character, including ones outside the BMP
+const TASK = /^(\s*(?:[-*+]|\d+[.)]) \[)(.)(\])/u;
 
 const DEFAULT_SETTINGS = {
-  // Same emoji as the Tasks plugin's start and done dates
-  stampInProgress: "🛫",
-  stampDone: "✅",
+  // The cycle, in order. `mark` is added with the time when a task switches to that state ("" = no time).
+  // 🛫 and ✅ are the same emoji as the Tasks plugin's start and done dates
+  states: [
+    { symbol: " ", mark: "" },
+    { symbol: "~", mark: "🛫" },
+    { symbol: "x", mark: "✅" },
+    { symbol: "-", mark: "" },
+  ],
   dateFormat: "YYYY-MM-DD HH:mm",
   interceptLivePreview: true,
   interceptReading: true,
@@ -35,11 +40,13 @@ function startsWithTime(rest, format) {
 /** Add "mark time" to a line.
     - If the mark is followed by a time, it is already stamped: leave the line as is
     - If only the mark is left (its time was deleted), insert the time right after that mark
-    - If the mark is missing, append "mark time" to the end of the line */
-function stamp(line, mark, format) {
+    - If the mark is missing, append "mark time" to the end of the line
+    Only the text from `from` on (after the checkbox) is searched, so a mark equal to the state symbol is not
+    mistaken for one */
+function stamp(line, mark, format, from) {
   const time = moment().format(format);
   let orphan = -1;
-  for (let i = line.indexOf(mark); i !== -1; i = line.indexOf(mark, i + mark.length)) {
+  for (let i = line.indexOf(mark, from); i !== -1; i = line.indexOf(mark, i + mark.length)) {
     const rest = line.slice(i + mark.length).replace(/^\s+/, "");
     if (startsWithTime(rest, format)) return line;
     if (orphan === -1) orphan = i;
@@ -51,14 +58,24 @@ function stamp(line, mark, format) {
 }
 
 /** Return the line switched to the next state, or null if it is not a task line.
-    No time is added for a state whose mark is empty */
+    A task whose state is not in the cycle goes to the first state. No time is added for a state whose
+    mark is empty */
 function nextLine(line, settings) {
   const m = line.match(TASK);
   if (!m) return null;
-  const next = ORDER[(ORDER.indexOf(m[2]) + 1) % ORDER.length];
-  const out = m[1] + next + m[3] + line.slice(m[0].length);
-  const mark = next === "~" ? settings.stampInProgress : next === "x" ? settings.stampDone : "";
-  return mark ? stamp(out, mark, settings.dateFormat || DEFAULT_SETTINGS.dateFormat) : out;
+  const states = settings.states;
+  const next = states[(states.findIndex((st) => st.symbol === m[2]) + 1) % states.length];
+  const head = m[1] + next.symbol + m[3];
+  const out = head + line.slice(m[0].length);
+  return next.mark ? stamp(out, next.mark, settings.dateFormat || DEFAULT_SETTINGS.dateFormat, head.length) : out;
+}
+
+/** Why a state symbol cannot be used, or null if it can */
+function symbolError(symbol, states, index) {
+  if ([...symbol].length !== 1) return "Use exactly one character";
+  if (symbol === "[" || symbol === "]") return "Brackets cannot be used";
+  if (states.some((st, i) => i !== index && st.symbol === symbol)) return "Already in the cycle";
+  return null;
 }
 
 module.exports = class TodoStatePlugin extends Plugin {
@@ -108,7 +125,22 @@ module.exports = class TodoStatePlugin extends Plugin {
   }
 
   async loadSettings() {
-    this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData());
+    const data = (await this.loadData()) || {};
+    // 0.2.0 development builds stored the [~] and [x] marks separately
+    const migrated = !data.states && ("stampInProgress" in data || "stampDone" in data);
+    if (migrated) {
+      data.states = DEFAULT_SETTINGS.states.map((st) => ({ ...st }));
+      if ("stampInProgress" in data) data.states[1].mark = data.stampInProgress;
+      if ("stampDone" in data) data.states[2].mark = data.stampDone;
+    }
+    delete data.stampInProgress;
+    delete data.stampDone;
+    this.settings = Object.assign({}, DEFAULT_SETTINGS, data);
+    if (!Array.isArray(this.settings.states) || this.settings.states.length < 2) {
+      this.settings.states = DEFAULT_SETTINGS.states;
+    }
+    this.settings.states = this.settings.states.map((st) => ({ ...st }));
+    if (migrated) await this.saveSettings();
   }
 
   async saveSettings() {
@@ -173,29 +205,94 @@ class TodoStateSettingTab extends PluginSettingTab {
     const noteEl = document.querySelector(".markdown-source-view.mod-cm6 .cm-scroller, .markdown-rendered");
     const markFont = noteEl ? getComputedStyle(noteEl).fontFamily : "var(--font-text)";
 
-    new Setting(containerEl).setName("Marks").setHeading();
-
     new Setting(containerEl)
-      .setName("In progress [~] mark")
-      .setDesc("Added before the time when a task becomes [~]. Leave empty to add no time for [~].")
-      .addText((t) => {
-        t.inputEl.style.fontFamily = markFont;
-        t.setValue(s.stampInProgress).onChange(async (v) => {
-          s.stampInProgress = v.trim();
+      .setName("States")
+      .setDesc(
+        "Clicking a checkbox moves the task to the next state in this list, and from the last back to the first. " +
+          "A task in a state not listed goes to the first one. The mark is added with the time when a task switches " +
+          "to that state; leave it empty to add no time.",
+      )
+      .setHeading();
+
+    const states = s.states;
+    const move = async (from, to) => {
+      states.splice(to, 0, states.splice(from, 1)[0]);
+      await save();
+      this.display();
+    };
+    states.forEach((st, i) => {
+      const row = new Setting(containerEl).setName(`[${st.symbol}]`);
+      row.addText((t) => {
+        t.setPlaceholder("Space").setValue(st.symbol === " " ? "" : st.symbol);
+        t.inputEl.size = 6;
+        t.inputEl.title = "Character between the brackets. Leave empty for a space ([ ])";
+        t.onChange(async (v) => {
+          const symbol = v === "" ? " " : v;
+          const error = symbolError(symbol, states, i);
+          t.inputEl.style.borderColor = error ? "var(--text-error)" : "";
+          t.inputEl.title = error || "Character between the brackets. Leave empty for a space ([ ])";
+          if (error) return;
+          st.symbol = symbol;
+          row.setName(`[${symbol}]`);
           await save();
         });
       });
-
-    new Setting(containerEl)
-      .setName("Done [x] mark")
-      .setDesc("Added before the time when a task becomes [x]. Leave empty to add no time for [x].")
-      .addText((t) => {
+      row.addText((t) => {
+        t.setPlaceholder("No time").setValue(st.mark);
         t.inputEl.style.fontFamily = markFont;
-        t.setValue(s.stampDone).onChange(async (v) => {
-          s.stampDone = v.trim();
+        t.inputEl.size = 8;
+        t.inputEl.title = "Mark added with the time when a task switches to this state";
+        t.onChange(async (v) => {
+          st.mark = v.trim();
           await save();
         });
       });
+      row.addExtraButton((b) =>
+        b
+          .setIcon("arrow-up")
+          .setTooltip("Move up")
+          .setDisabled(i === 0)
+          .onClick(() => i > 0 && move(i, i - 1)),
+      );
+      row.addExtraButton((b) =>
+        b
+          .setIcon("arrow-down")
+          .setTooltip("Move down")
+          .setDisabled(i === states.length - 1)
+          .onClick(() => i < states.length - 1 && move(i, i + 1)),
+      );
+      row.addExtraButton((b) =>
+        b
+          .setIcon("trash")
+          .setTooltip(states.length <= 2 ? "The cycle needs at least two states" : "Remove")
+          .setDisabled(states.length <= 2)
+          .onClick(async () => {
+            if (states.length <= 2) return;
+            states.splice(i, 1);
+            await save();
+            this.display();
+          }),
+      );
+    });
+
+    new Setting(containerEl)
+      .addButton((b) =>
+        b.setButtonText("Add state").onClick(async () => {
+          // Pick a free symbol so the new row is valid right away; the user can change it
+          const symbol = ["/", ">", "<", "?", "!", "*"].find((c) => !states.some((st) => st.symbol === c));
+          if (!symbol) return;
+          states.push({ symbol, mark: "" });
+          await save();
+          this.display();
+        }),
+      )
+      .addButton((b) =>
+        b.setButtonText("Reset to default").onClick(async () => {
+          s.states = DEFAULT_SETTINGS.states.map((st) => ({ ...st }));
+          await save();
+          this.display();
+        }),
+      );
 
     new Setting(containerEl).setName("Time").setHeading();
 

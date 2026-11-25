@@ -1,9 +1,9 @@
 # TODO State
 
-An Obsidian plugin that cycles task checkboxes through `[ ]` → `[~]` → `[x]` → `[-]` → `[ ]` and stamps start and done times at the end of the line. It was made to match the author's Neovim (obsidian.nvim) setup.
+An Obsidian plugin that cycles task checkboxes through states (by default `[ ]` → `[~]` → `[x]` → `[-]` → `[ ]`) and stamps start and done times at the end of the line. It was made to match the author's Neovim (obsidian.nvim) setup.
 
 - Cycle by clicking a checkbox (Live Preview and Reading view) or with the command "TODO State: Cycle checkbox state"
-- Switching to `[~]` appends `🛫 YYYY-MM-DD HH:mm`, and switching to `[x]` appends `✅ YYYY-MM-DD HH:mm` (the same emoji as the start and done dates of the [Tasks](https://github.com/obsidian-tasks-group/obsidian-tasks) plugin)
+- By default, switching to `[~]` appends `🛫 YYYY-MM-DD HH:mm`, and switching to `[x]` appends `✅ YYYY-MM-DD HH:mm` (the same emoji as the start and done dates of the [Tasks](https://github.com/obsidian-tasks-group/obsidian-tasks) plugin)
   - If the mark is already followed by a time, nothing is added, so cycling repeatedly never adds duplicates
   - If only the mark is left (its time was deleted), the time is inserted right after that mark
 - Times are never removed automatically. To redo one, delete the mark together with its time (if you delete only the mark and keep the time, a new "mark time" is appended and you end up with two times)
@@ -14,12 +14,14 @@ Open Settings → Community plugins → TODO State. The defaults give the behavi
 
 | Setting | Default | Description |
 | --- | --- | --- |
-| In progress `[~]` mark | `🛫` | Added before the time when a task becomes `[~]`. Any text works. Leave empty to add no time for `[~]` |
-| Done `[x]` mark | `✅` | Added before the time when a task becomes `[x]`. Leave empty to add no time for `[x]` |
+| States | `[ ]`, `[~]` 🛫, `[x]` ✅, `[-]` | The cycle, in order. Each state has a symbol (the character between the brackets; leave empty for a space) and a mark (see below). Reorder with the arrows, add with "Add state", remove with the trash icon. "Reset to default" restores the default cycle |
 | Time format | `YYYY-MM-DD HH:mm` | A [moment.js format](https://momentjs.com/docs/#/displaying/format/). Empty resets it to the default |
 | Checkbox clicks: Live Preview | On | When off, clicking a checkbox in Live Preview gets Obsidian's default behavior (or another plugin's, such as Tasks) |
 | Checkbox clicks: Reading view | On | The same for Reading view |
 
+- Clicking a checkbox (or running the command) moves the task to the next state in the list, and from the last state back to the first. A task whose symbol is not in the list goes to the first state
+- A state's mark is added with the time when a task switches to that state. Any text works (emoji, symbols, words). Leave it empty to add no time for that state
+- A symbol must be a single character, cannot be a bracket, and must not appear twice. The cycle needs at least two states
 - Whether a line already has a time is checked using the configured marks: a mark counts as stamped when the text after it (ignoring spaces) starts with a digit or parses with the configured format. Because anything starting with a digit counts, changing the format does not add a second time to lines stamped in the old format
 - After changing a mark, lines that only have the old mark get a new stamp with the new mark
 - The command "Cycle checkbox state" works even with checkbox clicks turned off (assigning it a hotkey is handy)
