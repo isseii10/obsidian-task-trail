@@ -1,0 +1,9 @@
+{
+  "id": "todo-state",
+  "name": "TODO State",
+  "description": "チェックボックスを [ ]→[~]→[x]→[-] の順に切り替え、着手・完了の時刻を行末に付ける（Neovim の obsidian.nvim 設定と同じ動き）",
+  "version": "0.1.0",
+  "author": "isseii10",
+  "isDesktopOnly": false,
+  "minAppVersion": "1.4.0"
+}
