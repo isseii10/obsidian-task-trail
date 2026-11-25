@@ -22,7 +22,10 @@ const moment = /** @type {typeof import("moment")} */ (/** @type {unknown} */ (o
 /** @typedef {{ symbol: string, mark: string }} State A checkbox state: the character between the brackets,
     and the mark added with the time when a task switches to it ("" = no time) */
 /** @typedef {{ states: State[], dateFormat: string, clearOnUncheck: boolean,
-    interceptLivePreview: boolean, interceptReading: boolean }} Settings */
+    interceptLivePreview: boolean, interceptReading: boolean, checkboxStyles: boolean }} Settings */
+
+// The class on <body> that turns on styles.css, so that the styles can be switched off from the settings
+const STYLES_CLASS = "todo-state-checkboxes";
 
 // `u` so that a state can be any single character, including ones outside the BMP
 const TASK = /^(\s*(?:[-*+]|\d+[.)]) \[)(.)(\])/u;
@@ -41,6 +44,8 @@ const DEFAULT_SETTINGS = {
   clearOnUncheck: false,
   interceptLivePreview: true,
   interceptReading: true,
+  // Draw each state differently (styles.css). Off for themes that already style alternate checkboxes
+  checkboxStyles: true,
 };
 
 /** Length of the time at the start of `rest` (the text after a mark, leading whitespace already skipped),
@@ -171,6 +176,7 @@ const MARK_OPTIONS = [
 class TodoStatePlugin extends Plugin {
   async onload() {
     await this.loadSettings();
+    this.applyStyles();
     this.addSettingTab(new TodoStateSettingTab(this.app, this));
 
     // Remember which rendered section each Reading view checkbox belongs to, to find its line on click
@@ -235,6 +241,14 @@ class TodoStatePlugin extends Plugin {
     }
     this.settings.states = this.settings.states.map((st) => ({ ...st }));
     if (migrated) await this.saveSettings();
+  }
+
+  onunload() {
+    document.body.classList.remove(STYLES_CLASS);
+  }
+
+  applyStyles() {
+    document.body.classList.toggle(STYLES_CLASS, this.settings.checkboxStyles);
   }
 
   async saveSettings() {
@@ -434,6 +448,22 @@ class TodoStateSettingTab extends PluginSettingTab {
       .addToggle((t) =>
         t.setValue(s.clearOnUncheck).onChange(async (v) => {
           s.clearOnUncheck = v;
+          await save();
+        }),
+      );
+
+    new Setting(containerEl).setName("Appearance").setHeading();
+
+    new Setting(containerEl)
+      .setName("Checkbox styles")
+      .setDesc(
+        "Draw each state differently (in progress, cancelled, question...). Obsidian alone draws every state " +
+          "other than [ ] as done. Turn off if your theme already styles these states.",
+      )
+      .addToggle((t) =>
+        t.setValue(s.checkboxStyles).onChange(async (v) => {
+          s.checkboxStyles = v;
+          this.plugin.applyStyles();
           await save();
         }),
       );

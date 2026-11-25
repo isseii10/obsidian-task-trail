@@ -14,6 +14,6 @@
 
 1. **Line editing** (cycling, stamping, clearing): add the case to `test/cases.json` first and see it fail, then fix the code. Run `npm run typecheck` and `npm test`. Node comes from `mise.toml`, so use `mise exec --` if the shell's `node` is a different version.
 2. **Clicks, settings UI, anything that needs Obsidian**:
-   - Copy `main.js` and `manifest.json` to the vault's `.obsidian/plugins/todo-state/`. Ask the user for the vault if you do not know it.
+   - Copy `main.js`, `manifest.json` and `styles.css` to the vault's `.obsidian/plugins/todo-state/`. Ask the user for the vault if you do not know it.
    - Run `obsidian plugin:reload id=todo-state`, then drive the app with `obsidian eval`.
    - Put back any note you edit while testing, and confirm it matches what was there before.

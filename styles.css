@@ -1,0 +1,98 @@
+/* TODO State: draw each checkbox state differently.
+   Vanilla Obsidian draws the checkbox of every symbol other than [ ] like [x] (a checkmark), so [?], [!],
+   [>] ... would all look done. These rules key off the data-task attribute (the symbol).
+   Obsidian puts it on the line (li in Reading view, .HyperMD-task-line in Live Preview) and, in Live Preview
+   only, on the checkbox itself, so a checkbox is matched as input[data-task] or li[data-task] > input
+   (li > p > input in loose lists).
+   Everything is scoped to body.todo-state-checkboxes, which the "Checkbox styles" setting toggles, so the
+   rules can be turned off where a theme already styles these states. */
+
+/* ---- Line text ----
+   Obsidian strikes through and fades only [x] / [X] lines (app.css applies --checklist-done-decoration to
+   [data-task="x"] alone), so other states already read as unfinished. Cancelled gets the done look directly:
+   setting the variables would do nothing, since nothing reads them for [-]. */
+body.todo-state-checkboxes ul > li.task-list-item[data-task="-"],
+body.todo-state-checkboxes .markdown-source-view.mod-cm6 .HyperMD-task-line[data-task="-"] {
+  text-decoration: line-through;
+  color: var(--text-faint);
+}
+
+/* ---- Checkboxes: color and icon per state ----
+   Each state sets --todo-state-color and --todo-state-icon on its checkbox; the rules at the end apply them.
+   [x] and symbols not listed here set neither and keep Obsidian's own look. */
+
+body.todo-state-checkboxes
+  :is(input[data-task="~"], li[data-task="~"] > input, li[data-task="~"] > p > input, input[data-task="/"], li[data-task="/"] > input, li[data-task="/"] > p > input):checked {
+  --todo-state-color: var(--interactive-accent);
+}
+body.todo-state-checkboxes
+  :is(input[data-task="-"], li[data-task="-"] > input, li[data-task="-"] > p > input):checked {
+  --todo-state-color: var(--text-faint);
+  --todo-state-icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='3' stroke-linecap='round'%3E%3Cpath d='M6 12h12'/%3E%3C/svg%3E");
+}
+body.todo-state-checkboxes
+  :is(input[data-task=">"], li[data-task=">"] > input, li[data-task=">"] > p > input):checked {
+  --todo-state-color: var(--color-cyan);
+  --todo-state-icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 12h14M13 6l6 6-6 6'/%3E%3C/svg%3E");
+}
+body.todo-state-checkboxes
+  :is(input[data-task="<"], li[data-task="<"] > input, li[data-task="<"] > p > input):checked {
+  --todo-state-color: var(--color-blue);
+  --todo-state-icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M19 12H5M11 6l-6 6 6 6'/%3E%3C/svg%3E");
+}
+body.todo-state-checkboxes
+  :is(input[data-task="?"], li[data-task="?"] > input, li[data-task="?"] > p > input):checked {
+  --todo-state-color: var(--color-purple);
+  --todo-state-icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M9 9a3 3 0 1 1 4 2.83c-.6.3-1 .9-1 1.57V14M12 18h.01'/%3E%3C/svg%3E");
+}
+body.todo-state-checkboxes
+  :is(input[data-task="!"], li[data-task="!"] > input, li[data-task="!"] > p > input):checked {
+  --todo-state-color: var(--color-red);
+  --todo-state-icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='3' stroke-linecap='round'%3E%3Cpath d='M12 5v9M12 18h.01'/%3E%3C/svg%3E");
+}
+body.todo-state-checkboxes
+  :is(input[data-task="*"], li[data-task="*"] > input, li[data-task="*"] > p > input):checked {
+  --todo-state-color: var(--color-yellow);
+  --todo-state-icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='black'%3E%3Cpath d='M12 3l2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 17l-5.5 2.9 1-6.1-4.4-4.3 6.1-.9z'/%3E%3C/svg%3E");
+}
+
+/* ---- Apply ---- */
+
+/* The color, also on hover (where Obsidian switches to --checkbox-color-hover). Falls back to Obsidian's
+   colors for states that set none */
+body.todo-state-checkboxes input.task-list-item-checkbox:checked {
+  background-color: var(--todo-state-color, var(--checkbox-color));
+  border-color: var(--todo-state-color, var(--checkbox-color));
+}
+body.todo-state-checkboxes input.task-list-item-checkbox:checked:hover {
+  background-color: var(--todo-state-color, var(--checkbox-color-hover));
+  border-color: var(--todo-state-color, var(--checkbox-color-hover));
+}
+
+/* The icon replaces the mask-image of the checkmark Obsidian draws in ::after. Only states with an icon are
+   listed, so [x] keeps its checkmark */
+body.todo-state-checkboxes
+  :is(
+    input[data-task="-"], li[data-task="-"] > input, li[data-task="-"] > p > input,
+    input[data-task=">"], li[data-task=">"] > input, li[data-task=">"] > p > input,
+    input[data-task="<"], li[data-task="<"] > input, li[data-task="<"] > p > input,
+    input[data-task="?"], li[data-task="?"] > input, li[data-task="?"] > p > input,
+    input[data-task="!"], li[data-task="!"] > input, li[data-task="!"] > p > input,
+    input[data-task="*"], li[data-task="*"] > input, li[data-task="*"] > p > input
+  ):checked::after {
+  -webkit-mask-image: var(--todo-state-icon);
+  mask-image: var(--todo-state-icon);
+}
+
+/* In progress: an outline with the left half filled, no icon. Hover is listed too, since the hover rule above
+   would otherwise fill the whole box */
+body.todo-state-checkboxes
+  :is(input[data-task="~"], li[data-task="~"] > input, li[data-task="~"] > p > input, input[data-task="/"], li[data-task="/"] > input, li[data-task="/"] > p > input):checked,
+body.todo-state-checkboxes
+  :is(input[data-task="~"], li[data-task="~"] > input, li[data-task="~"] > p > input, input[data-task="/"], li[data-task="/"] > input, li[data-task="/"] > p > input):checked:hover {
+  background: linear-gradient(90deg, var(--todo-state-color) 50%, transparent 50%);
+}
+body.todo-state-checkboxes
+  :is(input[data-task="~"], li[data-task="~"] > input, li[data-task="~"] > p > input, input[data-task="/"], li[data-task="/"] > input, li[data-task="/"] > p > input):checked::after {
+  display: none;
+}

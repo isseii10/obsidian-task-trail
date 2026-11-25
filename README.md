@@ -17,6 +17,7 @@ Open Settings → Community plugins → TODO State. The defaults give the behavi
 | States | `[ ]`, `[~]` 🛫, `[x]` ✅, `[-]` | The cycle, in order. Each state has a symbol (the character between the brackets) and a mark (see below), both chosen from a list. Reorder with the arrows, add with "Add state", remove with the trash icon. "Reset to default" restores the default cycle |
 | Time format | `YYYY-MM-DD HH:mm` | A [moment.js format](https://momentjs.com/docs/#/displaying/format/). Empty resets it to the default |
 | Clear times when unchecked | Off | When a task goes back to `[ ]`, remove every "mark time" added with the configured marks. A mark not followed by a time, and text such as other plugins' dates, is left alone |
+| Checkbox styles | On | Draws each state differently (see below). Turn off if your theme already styles these states |
 | Checkbox clicks: Live Preview | On | When off, clicking a checkbox in Live Preview gets Obsidian's default behavior (or another plugin's, such as Tasks) |
 | Checkbox clicks: Reading view | On | The same for Reading view |
 
@@ -31,6 +32,22 @@ Open Settings → Community plugins → TODO State. The defaults give the behavi
 - An incomplete time right after a mark (e.g. `🛫 2026-01-0`) still counts as a time, so no new time is added; fix it by hand. It cannot be told apart from a time in an earlier format, which must not be overwritten. "Clear times when unchecked" removes incomplete times as well
 - The command "Cycle checkbox state" works even with checkbox clicks turned off (assigning it a hotkey is handy)
 - Checkbox clicks are handled by stopping `mousedown` / `click` on `document` in the capture phase, so they conflict with other plugins that handle checkbox clicks, such as Tasks. Turn them off when using such a plugin
+
+## Checkbox styles
+
+Obsidian draws the checkbox of every state other than `[ ]` like `[x]`, and strikes through only `[x]` lines. With "Checkbox styles" on (`styles.css`):
+
+| State | Checkbox | Text |
+| --- | --- | --- |
+| `[~]` `[/]` | Left half filled | Normal |
+| `[-]` | Grey, minus sign | Struck through, faint |
+| `[>]` | Cyan, right arrow | Normal |
+| `[<]` | Blue, left arrow | Normal |
+| `[?]` | Purple, question mark | Normal |
+| `[!]` | Red, exclamation mark | Normal |
+| `[*]` | Yellow, star | Normal |
+
+`[x]` and other symbols keep Obsidian's look.
 
 ## Installation
 
@@ -52,8 +69,8 @@ CI (`.github/workflows/test.yml`) runs the same checks on every push and pull re
 
 ## Releasing
 
-Bump `version` in `manifest.json`, create a release with a tag of the same name, and attach `main.js` and `manifest.json`.
+Bump `version` in `manifest.json`, create a release with a tag of the same name, and attach `main.js`, `manifest.json` and `styles.css`.
 
 ```sh
-gh release create X.Y.Z main.js manifest.json --title X.Y.Z --notes "..."
+gh release create X.Y.Z main.js manifest.json styles.css --title X.Y.Z --notes "..."
 ```
