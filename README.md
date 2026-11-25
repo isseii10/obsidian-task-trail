@@ -23,8 +23,8 @@ Open Settings → Community plugins → TODO State. The defaults give the behavi
 
 - Clicking a checkbox (or running the command) moves the task to the next state in the list, and from the last state back to the first. A task whose symbol is not in the list goes to the first state
 - A state's mark is added with the time when a task switches to that state. Choose "No time" to add none
-- Symbols: `[ ]` to do, `[x]` done, `[~]` in progress, `[/]` in progress, `[-]` cancelled, `[>]` forwarded, `[<]` scheduled, `[?]` question, `[!]` important, `[*]` star
-- Marks: 🛫 start, ✅ done, ❌ cancelled, ➕ created, ⏳ scheduled, 📅 due (the Tasks plugin's date emoji)
+- Symbols: `[ ]` to do, `[x]` done, `[~]` in progress, `[/]` in progress, `[-]` cancelled, `[>]` forwarded, `[<]` scheduled. Only states a task moves through are offered; markers such as `[!]` important or `[*]` star are left to themes and other plugins
+- Marks: 🛫 start, ✅ done, ❌ cancelled (the Tasks plugin's date emoji that mean "this happened at this time")
 - A symbol or mark already used by another state cannot be chosen. The cycle needs at least two states
 - The lists keep out values that break the plugin: a mark with digits is mistaken for a time, and a mark made of letters matches ordinary words. A value set outside the lists by editing `data.json` is kept and shown as "(custom)"
 - Whether a line already has a time is checked using the configured marks: a mark counts as stamped when the text after it (ignoring spaces) starts with a digit or parses with the configured format. Because anything starting with a digit counts, changing the format does not add a second time to lines stamped in the old format
@@ -43,9 +43,6 @@ Obsidian draws the checkbox of every state other than `[ ]` like `[x]`, and stri
 | `[-]` | Grey, minus sign | Struck through, faint |
 | `[>]` | Cyan, right arrow | Normal |
 | `[<]` | Blue, left arrow | Normal |
-| `[?]` | Purple, question mark | Normal |
-| `[!]` | Red, exclamation mark | Normal |
-| `[*]` | Yellow, star | Normal |
 
 `[x]` and other symbols keep Obsidian's look.
 

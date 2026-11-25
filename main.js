@@ -87,7 +87,7 @@ function clearStamps(line, marks, format, from) {
       let start = i;
       while (start > from && /\s/.test(line[start - 1])) start--;
       const end = i + mark.length + (after.length - rest.length) + len;
-      line = line.slice(0, start) + line.slice(end);
+      line = `${line.slice(0, start)}${line.slice(end)}`;
       i = line.indexOf(mark, Math.max(start, from));
     }
   }
@@ -116,10 +116,10 @@ function stamp(line, mark, format, from, now) {
     if (timeLength(rest, format) > 0) return line;
     if (orphan === -1) orphan = i;
   }
-  if (orphan === -1) return line + " " + mark + " " + time;
+  if (orphan === -1) return `${line} ${mark} ${time}`;
   const end = orphan + mark.length;
   const rest = line.slice(end).replace(/^\s+/, "");
-  return line.slice(0, end) + " " + time + (rest ? " " + rest : "");
+  return `${line.slice(0, end)} ${time}${rest ? ` ${rest}` : ""}`;
 }
 
 /** Return the line switched to the next state, or null if it is not a task line.
@@ -135,7 +135,7 @@ function nextLine(line, settings, now = moment()) {
   const states = settings.states;
   const next = states[(states.findIndex((st) => st.symbol === m[2]) + 1) % states.length];
   const format = settings.dateFormat || DEFAULT_SETTINGS.dateFormat;
-  const head = m[1] + next.symbol + m[3];
+  const head = `${m[1]}${next.symbol}${m[3]}`;
   let out = head + line.slice(m[0].length);
   if (next.symbol === " " && settings.clearOnUncheck) {
     out = clearStamps(out, states.map((st) => st.mark), format, head.length);
@@ -149,7 +149,10 @@ function nextLine(line, settings, now = moment()) {
    not rendered as a checkbox by Obsidian. A value already saved outside the lists (e.g. edited in data.json)
    is kept and shown as custom, so an existing setup keeps working. */
 
-/** Characters between the brackets, from the alternate checkboxes common in themes */
+/** Characters between the brackets. Only states a task moves through belong in a cycle: to do, in progress,
+    done, and the endings cancelled, forwarded (moved to another day) and scheduled (moved to a future date),
+    the last two as in Bullet Journal. Markers that say nothing about progress, such as [!] important, [*]
+    star or [?] question, are left to themes and other plugins, to keep this plugin about the cycle */
 const SYMBOL_OPTIONS = [
   { value: " ", label: "[ ] to do" },
   { value: "x", label: "[x] done" },
@@ -158,20 +161,15 @@ const SYMBOL_OPTIONS = [
   { value: "-", label: "[-] cancelled" },
   { value: ">", label: "[>] forwarded" },
   { value: "<", label: "[<] scheduled" },
-  { value: "?", label: "[?] question" },
-  { value: "!", label: "[!] important" },
-  { value: "*", label: "[*] star" },
 ];
 
-/** Marks, from the Tasks plugin's date emoji */
+/** Marks, from the Tasks plugin's date emoji. Only those that mean "this happened at this time" fit a stamp
+    added when a state is reached; ➕ created, ⏳ scheduled and 📅 due mean other dates and are left out */
 const MARK_OPTIONS = [
   { value: "", label: "No time" },
   { value: "🛫", label: "🛫 start" },
   { value: "✅", label: "✅ done" },
   { value: "❌", label: "❌ cancelled" },
-  { value: "➕", label: "➕ created" },
-  { value: "⏳", label: "⏳ scheduled" },
-  { value: "📅", label: "📅 due" },
 ];
 
 /** Whether a state symbol is usable: one character that Obsidian reads as a task, and that cannot break the
@@ -339,7 +337,7 @@ class TodoStatePlugin extends Plugin {
     // (.cm-editor), so walk up from the checkbox
     // (closest() is typed as Element, but these are always HTMLElements)
     const editorEl = /** @type {HTMLElement | null} */ (input.closest(".cm-editor"));
-    const cm = editorEl && EditorView.findFromDOM(editorEl);
+    const cm = editorEl ? EditorView.findFromDOM(editorEl) : null;
     if (cm) {
       const line = cm.state.doc.lineAt(cm.posAtDOM(input));
       const updated = nextLine(line.text, this.settings);
@@ -358,11 +356,11 @@ class TodoStatePlugin extends Plugin {
     // Reading view: the file line is the section's first line plus the li's data-line
     const entry = this.reading.get(input);
     const li = /** @type {HTMLElement | null} */ (input.closest("li[data-line]"));
-    const info = entry && entry.ctx.getSectionInfo(entry.el);
+    const info = entry?.ctx.getSectionInfo(entry.el);
     const view = this.app.workspace.getActiveViewOfType(MarkdownView);
     // getAbstractFileByPath rather than getFileByPath, which needs Obsidian 1.5.7 (minAppVersion is 1.4.0)
-    const source = entry && this.app.vault.getAbstractFileByPath(entry.ctx.sourcePath);
-    const file = (view && view.file) || (source instanceof TFile ? source : null);
+    const source = entry ? this.app.vault.getAbstractFileByPath(entry.ctx.sourcePath) : null;
+    const file = view?.file ?? (source instanceof TFile ? source : null);
     if (!li || !info || !file) {
       new Notice("TODO State: cannot toggle the checkbox at this position");
       return;
@@ -404,7 +402,7 @@ class TodoStateSettingTab extends PluginSettingTab {
       .setDesc(
         "Clicking a checkbox moves the task to the next state in this list, and from the last back to the first. " +
           "A task in a state not listed goes to the first one. The mark is added with the time when a task switches " +
-          "to that state; leave it empty to add no time.",
+          "to that state; choose No time to add none.",
       )
       .setHeading();
 
@@ -536,7 +534,7 @@ class TodoStateSettingTab extends PluginSettingTab {
     new Setting(containerEl)
       .setName("Checkbox styles")
       .setDesc(
-        "Draw each state differently (in progress, cancelled, question...). Obsidian alone draws every state " +
+        "Draw each state differently (in progress, cancelled, forwarded...). Obsidian alone draws every state " +
           "other than [ ] as done. Leave off if your theme or a CSS snippet already styles these states, since " +
           "these styles would override it.",
       )
