@@ -7,14 +7,16 @@ on:
 permissions:
   contents: read
 
+# Actions are pinned to commit SHAs, not tags: a tag can be moved, and the release job can publish and sign
+# what users install. Dependabot (.github/dependabot.yml) updates the SHAs and the version comments
 jobs:
   test:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       # Node from mise.toml (the same version Obsidian uses). Not actions/setup-node, which cannot read mise.toml
-      - uses: jdx/mise-action@v5
+      - uses: jdx/mise-action@924e7c586e33d7d4bae9c14e26c5d22e2beb6e78 # v5.3.0
 
       - run: npm ci
       - run: node --check main.js
@@ -44,9 +46,9 @@ jobs:
       attestations: write
       artifact-metadata: write
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
-      - uses: actions/attest@v4
+      - uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4.2.2
         with:
           subject-path: |
             main.js

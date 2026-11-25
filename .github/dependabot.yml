@@ -1,0 +1,15 @@
+# Keeps the SHA-pinned actions in the workflows current, since the release job publishes and signs what users
+# install. npm is only dev tooling (main.js bundles no dependencies), so it is updated monthly in one PR
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: monthly
+    groups:
+      dev:
+        patterns: ["*"]
