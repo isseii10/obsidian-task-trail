@@ -24,18 +24,43 @@ const DEFAULT_SETTINGS = {
   interceptReading: true,
 };
 
+/** 印の後ろ（空白を飛ばした先）が時刻か。数字で始まれば時刻とみなす（書式を変える前の時刻も含めるため）。
+    数字で始まらない書式（MMM D など）は、書式どおりに読めるかで見る */
+function startsWithTime(rest, format) {
+  if (/^\d/.test(rest)) return true;
+  for (let k = Math.min(rest.length, 64); k > 0; k--) {
+    if (moment(rest.slice(0, k), format, true).isValid()) return true;
+  }
+  return false;
+}
+
+/** 行に「印＋時刻」を付ける。
+    - 印の後に時刻があれば、付いているので何もしない
+    - 印だけ残っていれば（時刻を消した）、その印のすぐ後に時刻を補う
+    - 印がなければ、行末に「印 時刻」を付ける */
+function stamp(line, mark, format) {
+  const time = moment().format(format);
+  let orphan = -1;
+  for (let i = line.indexOf(mark); i !== -1; i = line.indexOf(mark, i + mark.length)) {
+    const rest = line.slice(i + mark.length).replace(/^\s+/, "");
+    if (startsWithTime(rest, format)) return line;
+    if (orphan === -1) orphan = i;
+  }
+  if (orphan === -1) return line + " " + mark + " " + time;
+  const end = orphan + mark.length;
+  const rest = line.slice(end).replace(/^\s+/, "");
+  return line.slice(0, end) + " " + time + (rest ? " " + rest : "");
+}
+
 /** 1行を次の状態にした行を返す。タスク行でなければ null。
     印が空の状態では時刻を付けない */
 function nextLine(line, settings) {
   const m = line.match(TASK);
   if (!m) return null;
   const next = ORDER[(ORDER.indexOf(m[2]) + 1) % ORDER.length];
-  let out = m[1] + next + m[3] + line.slice(m[0].length);
+  const out = m[1] + next + m[3] + line.slice(m[0].length);
   const mark = next === "~" ? settings.stampInProgress : next === "x" ? settings.stampDone : "";
-  if (mark && !out.includes(mark)) {
-    out += " " + mark + " " + moment().format(settings.dateFormat || DEFAULT_SETTINGS.dateFormat);
-  }
-  return out;
+  return mark ? stamp(out, mark, settings.dateFormat || DEFAULT_SETTINGS.dateFormat) : out;
 }
 
 module.exports = class TodoStatePlugin extends Plugin {
