@@ -30,13 +30,13 @@ const DEFAULT_SETTINGS = {
 
 /** Length of the time at the start of `rest` (the text after a mark, leading whitespace already skipped),
     or 0 if it does not start with a time. The longest prefix that parses with the format counts. Failing
-    that, anything starting with a digit counts as a date with an optional time, so times written in an
-    earlier format are still recognized */
+    that, a run of digit groups (digits and - / . :, separated by spaces) counts, so that times written in an
+    earlier format, and incomplete ones, are recognized as a whole */
 function timeLength(rest, format) {
   for (let k = Math.min(rest.length, 64); k > 0; k--) {
     if (moment(rest.slice(0, k), format, true).isValid()) return k;
   }
-  const m = rest.match(/^\d[\d\-\/.:]*(?:[ T]\d{1,2}:\d{2}(?::\d{2})?)?/);
+  const m = rest.match(/^\d[\d\-\/.:]*(?:[ \t]+\d[\d\-\/.:]*)*/);
   return m ? m[0].length : 0;
 }
 
@@ -68,9 +68,9 @@ function clearStamps(line, marks, format, from) {
     - If only the mark is left (its time was deleted), insert the time right after that mark
     - If the mark is missing, append "mark time" to the end of the line
     Only the text from `from` on (after the checkbox) is searched, so a mark equal to the state symbol is not
-    mistaken for one */
-function stamp(line, mark, format, from) {
-  const time = moment().format(format);
+    mistaken for one. `now` is a moment */
+function stamp(line, mark, format, from, now) {
+  const time = now.format(format);
   let orphan = -1;
   for (let i = line.indexOf(mark, from); i !== -1; i = line.indexOf(mark, i + mark.length)) {
     const rest = line.slice(i + mark.length).replace(/^\s+/, "");
@@ -85,8 +85,8 @@ function stamp(line, mark, format, from) {
 
 /** Return the line switched to the next state, or null if it is not a task line.
     A task whose state is not in the cycle goes to the first state. No time is added for a state whose
-    mark is empty */
-function nextLine(line, settings) {
+    mark is empty. `now` (a moment) is the time to stamp, so that tests can fix it */
+function nextLine(line, settings, now = moment()) {
   const m = line.match(TASK);
   if (!m) return null;
   const states = settings.states;
@@ -97,7 +97,7 @@ function nextLine(line, settings) {
   if (next.symbol === " " && settings.clearOnUncheck) {
     out = clearStamps(out, states.map((st) => st.mark), format, head.length);
   }
-  return next.mark ? stamp(out, next.mark, format, head.length) : out;
+  return next.mark ? stamp(out, next.mark, format, head.length, now) : out;
 }
 
 /** Why a state symbol cannot be used, or null if it can */
@@ -108,7 +108,7 @@ function symbolError(symbol, states, index) {
   return null;
 }
 
-module.exports = class TodoStatePlugin extends Plugin {
+class TodoStatePlugin extends Plugin {
   async onload() {
     await this.loadSettings();
     this.addSettingTab(new TodoStateSettingTab(this.app, this));
@@ -216,7 +216,7 @@ module.exports = class TodoStatePlugin extends Plugin {
       return lines.join("\n");
     });
   }
-};
+}
 
 class TodoStateSettingTab extends PluginSettingTab {
   constructor(app, plugin) {
@@ -383,3 +383,7 @@ class TodoStateSettingTab extends PluginSettingTab {
       );
   }
 }
+
+module.exports = TodoStatePlugin;
+// The line-editing functions, for the tests (test/). Obsidian only uses the class itself
+module.exports.internals = { nextLine, stamp, clearStamps, timeLength, symbolError, DEFAULT_SETTINGS };

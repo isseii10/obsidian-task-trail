@@ -1,0 +1,11 @@
+{
+  "name": "obsidian-todo-state",
+  "private": true,
+  "description": "Development only: the plugin itself is main.js and needs no build. This file is for the tests.",
+  "scripts": {
+    "test": "node --test"
+  },
+  "devDependencies": {
+    "moment": "2.30.1"
+  }
+}

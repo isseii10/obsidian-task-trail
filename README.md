@@ -25,12 +25,22 @@ Open Settings → Community plugins → TODO State. The defaults give the behavi
 - A symbol must be a single character, cannot be a bracket, and must not appear twice. The cycle needs at least two states
 - Whether a line already has a time is checked using the configured marks: a mark counts as stamped when the text after it (ignoring spaces) starts with a digit or parses with the configured format. Because anything starting with a digit counts, changing the format does not add a second time to lines stamped in the old format
 - After changing a mark, lines that only have the old mark get a new stamp with the new mark
+- An incomplete time right after a mark (e.g. `🛫 2026-01-0`) still counts as a time, so no new time is added; fix it by hand. It cannot be told apart from a time in an earlier format, which must not be overwritten. "Clear times when unchecked" removes incomplete times as well
 - The command "Cycle checkbox state" works even with checkbox clicks turned off (assigning it a hotkey is handy)
 - Checkbox clicks are handled by stopping `mousedown` / `click` on `document` in the capture phase, so they conflict with other plugins that handle checkbox clicks, such as Tasks. Turn them off when using such a plugin
 
 ## Installation
 
 Add `isseii10/obsidian-todo-state` in [BRAT](https://github.com/TfTHacker/obsidian42-brat).
+
+## Development
+
+The plugin is `main.js` itself and needs no build. The tests check the line editing (cycling, stamping, clearing) with Node's test runner. `test/cases.json` lists the cases as input and expected output.
+
+```sh
+npm install   # only moment, the same version Obsidian bundles
+npm test
+```
 
 ## Releasing
 
