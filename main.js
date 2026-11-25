@@ -276,6 +276,10 @@ class TodoStatePlugin extends Plugin {
     const onCheckbox = (evt) => {
       const target = evt.target;
       if (!(target instanceof HTMLInputElement) || !target.matches("input.task-list-item-checkbox")) return;
+      // Leave checkboxes inside an embedded note (![[note]]) to Obsidian. Their line numbers are relative to the
+      // embedded note, but the line lookup below resolves them against the note being viewed: in Reading view a
+      // click rewrote an unrelated task of the host note, and in Live Preview it did nothing at all
+      if (target.closest(".internal-embed, .markdown-embed")) return;
       // Live Preview checkboxes are inside CodeMirror; everything else is Reading view
       const inEditor = !!target.closest(".cm-editor");
       if (inEditor ? !this.settings.interceptLivePreview : !this.settings.interceptReading) return;
