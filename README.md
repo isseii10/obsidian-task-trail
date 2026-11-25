@@ -40,7 +40,7 @@ The plugin is `main.js` itself and needs no build. The tests check the line edit
 Use the same Node as Obsidian (24, pinned in `mise.toml`).
 
 ```sh
-npm install   # only moment, the same version Obsidian bundles
+npm install   # only moment, for the tests
 npm test
 ```
 
