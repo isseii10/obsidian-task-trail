@@ -60,7 +60,7 @@ function timeLength(rest, format) {
   for (let k = Math.min(rest.length, 64); k > 0; k--) {
     if (moment(rest.slice(0, k), format, true).isValid()) return k;
   }
-  const m = rest.match(/^\d[\d\-\/.:]*(?:[ \t]+\d[\d\-\/.:]*)*/);
+  const m = rest.match(/^\d[\d\-/.:]*(?:[ \t]+\d[\d\-/.:]*)*/);
   return m ? m[0].length : 0;
 }
 
@@ -179,7 +179,7 @@ const MARK_OPTIONS = [
 function isValidSymbol(symbol) {
   if (typeof symbol !== "string" || [...symbol].length !== 1) return false;
   if (symbol === " ") return true;
-  return !/[\[\]\\\s\p{Cc}\p{Cf}]/u.test(symbol);
+  return !/[[\]\\\s\p{Cc}\p{Cf}]/u.test(symbol);
 }
 
 /** Whether a mark is usable. Digits would be mistaken for a time (see timeLength), control characters (e.g. a
@@ -282,7 +282,7 @@ class TaskTrailPlugin extends Plugin {
       if (target.closest(".internal-embed, .markdown-embed")) return;
       // Live Preview checkboxes are inside CodeMirror; everything else is Reading view
       const inEditor = !!target.closest(".cm-editor");
-      if (inEditor ? !this.settings.interceptLivePreview : !this.settings.interceptReading) return;
+      if (inEditor ? !this.prefs.interceptLivePreview : !this.prefs.interceptReading) return;
       evt.preventDefault();
       evt.stopPropagation();
       evt.stopImmediatePropagation();
@@ -301,7 +301,7 @@ class TaskTrailPlugin extends Plugin {
           for (let n = a; n <= b; n++) lines.add(n);
         }
         for (const n of lines) {
-          const updated = nextLine(editor.getLine(n), this.settings);
+          const updated = nextLine(editor.getLine(n), this.prefs);
           if (updated !== null) editor.setLine(n, updated);
         }
       },
@@ -311,8 +311,10 @@ class TaskTrailPlugin extends Plugin {
   async loadSettings() {
     const raw = await this.loadData();
     const { settings, ignored } = sanitizeSettings(raw);
+    // Named prefs, not settings: Obsidian 1.13.0 declares Plugin.settings, and the directory's review flags
+    // any use of that name as an API newer than minAppVersion (1.4.0)
     /** @type {Settings} */
-    this.settings = settings;
+    this.prefs = settings;
     if (ignored.length > 0) {
       new Notice(`Task Trail: ignored invalid settings in data.json: ${ignored.join(", ")}`, 0);
     }
@@ -328,11 +330,11 @@ class TaskTrailPlugin extends Plugin {
   }
 
   applyStyles() {
-    document.body.classList.toggle(STYLES_CLASS, this.settings.checkboxStyles);
+    document.body.classList.toggle(STYLES_CLASS, this.prefs.checkboxStyles);
   }
 
   async saveSettings() {
-    await this.saveData(this.settings);
+    await this.saveData(this.prefs);
   }
 
   /** @param {HTMLInputElement} input */
@@ -344,14 +346,15 @@ class TaskTrailPlugin extends Plugin {
     const cm = editorEl ? EditorView.findFromDOM(editorEl) : null;
     if (cm) {
       const line = cm.state.doc.lineAt(cm.posAtDOM(input));
-      const updated = nextLine(line.text, this.settings);
+      const updated = nextLine(line.text, this.prefs);
       if (updated === null) return;
       cm.dispatch({ changes: { from: line.from, to: line.to, insert: updated } });
       // Because the click was preventDefault-ed, the browser restores `checked` to its pre-click value
       // after this handler. Obsidian may reuse the same input, which would then keep the stale value and
       // break :checked styling, so set it to match the new state once the browser is done
       const checked = updated.match(TASK)?.[2] !== " ";
-      setTimeout(() => {
+      // window.setTimeout, not the global, so it runs in the right window for a note in a popout window
+      window.setTimeout(() => {
         if (input.isConnected) input.checked = checked;
       });
       return;
@@ -372,7 +375,7 @@ class TaskTrailPlugin extends Plugin {
     const n = info.lineStart + Number(li.dataset.line);
     this.app.vault.process(file, (text) => {
       const lines = text.split("\n");
-      const updated = n < lines.length ? nextLine(lines[n], this.settings) : null;
+      const updated = n < lines.length ? nextLine(lines[n], this.prefs) : null;
       if (updated === null) return text;
       lines[n] = updated;
       return lines.join("\n");
@@ -392,7 +395,7 @@ class TaskTrailSettingTab extends PluginSettingTab {
 
   display() {
     const { containerEl } = this;
-    const s = this.plugin.settings;
+    const s = this.plugin.prefs;
     const save = () => this.plugin.saveSettings();
     containerEl.empty();
 

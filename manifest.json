@@ -2,7 +2,7 @@
   "id": "task-trail",
   "name": "Task Trail",
   "description": "Leave a trail of when each task was started, finished or dropped: click a checkbox to move it to its next state, and the time is stamped on the line.",
-  "version": "0.2.1",
+  "version": "0.2.2",
   "author": "isseii10",
   "isDesktopOnly": false,
   "minAppVersion": "1.4.0"

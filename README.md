@@ -72,6 +72,8 @@ npm run typecheck
 npm test
 ```
 
+`npm run build` only checks the syntax of `main.js`: there is no build, but the community plugin directory reproduces releases by running a `build` script, and with this one the released `main.js` is the committed file as is.
+
 CI (`.github/workflows/test.yml`) runs the same checks on every push and pull request, and on a tag also checks that the tag matches `manifest.json`'s `version`.
 
 ## Releasing
