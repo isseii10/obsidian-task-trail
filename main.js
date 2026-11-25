@@ -92,8 +92,10 @@ module.exports = class TodoStatePlugin extends Plugin {
   }
 
   cycleFromCheckbox(input) {
-    // Live Preview / Source: CodeMirror から行を取る
-    const cm = EditorView.findFromDOM(input);
+    // Live Preview / Source: CodeMirror から行を取る。findFromDOM はエディタの外側の要素（.cm-editor）を
+    // 渡さないと見つけられないので、チェックボックスから辿る
+    const editorEl = input.closest(".cm-editor");
+    const cm = editorEl && EditorView.findFromDOM(editorEl);
     if (cm) {
       const line = cm.state.doc.lineAt(cm.posAtDOM(input));
       const updated = nextLine(line.text, this.settings);
