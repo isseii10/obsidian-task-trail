@@ -4,7 +4,7 @@
    - Switching to [~] appends "<in-progress mark> <time>", switching to [x] appends "<done mark> <time>"
      (not added again if the mark already has a time)
    - Times are never removed automatically, so a misclick never loses a record. Remove them by hand to redo
-   - The marks, the time format and click interception are configurable. Defaults match the Neovim setup
+   - The marks, the time format and click interception are configurable
    Written in plain JavaScript (CommonJS) so that it runs without a build step. */
 const { Plugin, PluginSettingTab, Setting, MarkdownView, Notice, moment } = require("obsidian");
 const { EditorView } = require("@codemirror/view");
@@ -12,14 +12,10 @@ const { EditorView } = require("@codemirror/view");
 const ORDER = [" ", "~", "x", "-"];
 const TASK = /^(\s*(?:[-*+]|\d+[.)]) \[)(.)(\])/;
 
-const PRESETS = {
-  nerd: { name: "Nerd Font", inProgress: "󱓞", done: "󰈼" },
-  emoji: { name: "Emoji (🛫 / ✅)", inProgress: "🛫", done: "✅" },
-};
-
 const DEFAULT_SETTINGS = {
-  stampInProgress: PRESETS.nerd.inProgress,
-  stampDone: PRESETS.nerd.done,
+  // Same emoji as the Tasks plugin's start and done dates
+  stampInProgress: "🛫",
+  stampDone: "✅",
   dateFormat: "YYYY-MM-DD HH:mm",
   interceptLivePreview: true,
   interceptReading: true,
@@ -172,33 +168,12 @@ class TodoStateSettingTab extends PluginSettingTab {
     const save = () => this.plugin.saveSettings();
     containerEl.empty();
 
-    // Draw the mark inputs in the same font as notes, so a Nerd Font set up for notes (theme, CSS snippet)
-    // also applies here. The settings UI font usually lacks Nerd Font glyphs and shows them as boxes
+    // Draw the mark inputs in the same font as notes, so marks that rely on a font set up for notes
+    // (theme, CSS snippet) look the same here instead of showing as boxes in the settings UI font
     const noteEl = document.querySelector(".markdown-source-view.mod-cm6 .cm-scroller, .markdown-rendered");
     const markFont = noteEl ? getComputedStyle(noteEl).fontFamily : "var(--font-text)";
 
     new Setting(containerEl).setName("Marks").setHeading();
-
-    const presetOf = () =>
-      Object.keys(PRESETS).find((k) => PRESETS[k].inProgress === s.stampInProgress && PRESETS[k].done === s.stampDone) ||
-      "custom";
-    let dropdown;
-    new Setting(containerEl)
-      .setName("Preset")
-      .setDesc("Fills in both marks below. Choose Emoji if you do not have a Nerd Font installed.")
-      .addDropdown((d) => {
-        for (const [k, p] of Object.entries(PRESETS)) d.addOption(k, p.name);
-        d.addOption("custom", "Custom");
-        d.setValue(presetOf());
-        dropdown = d;
-        d.onChange(async (k) => {
-          if (!PRESETS[k]) return;
-          s.stampInProgress = PRESETS[k].inProgress;
-          s.stampDone = PRESETS[k].done;
-          await save();
-          this.display();
-        });
-      });
 
     new Setting(containerEl)
       .setName("In progress [~] mark")
@@ -207,7 +182,6 @@ class TodoStateSettingTab extends PluginSettingTab {
         t.inputEl.style.fontFamily = markFont;
         t.setValue(s.stampInProgress).onChange(async (v) => {
           s.stampInProgress = v.trim();
-          dropdown.setValue(presetOf());
           await save();
         });
       });
@@ -219,7 +193,6 @@ class TodoStateSettingTab extends PluginSettingTab {
         t.inputEl.style.fontFamily = markFont;
         t.setValue(s.stampDone).onChange(async (v) => {
           s.stampDone = v.trim();
-          dropdown.setValue(presetOf());
           await save();
         });
       });
