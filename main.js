@@ -99,7 +99,15 @@ module.exports = class TodoStatePlugin extends Plugin {
     if (cm) {
       const line = cm.state.doc.lineAt(cm.posAtDOM(input));
       const updated = nextLine(line.text, this.settings);
-      if (updated !== null) cm.dispatch({ changes: { from: line.from, to: line.to, insert: updated } });
+      if (updated === null) return;
+      cm.dispatch({ changes: { from: line.from, to: line.to, insert: updated } });
+      // click を preventDefault したので、ブラウザはこの後で checked をクリック前の値に戻す。
+      // Obsidian は同じ input を使い回すことがあり、戻された値のまま残って CSS（:checked）がずれるので、
+      // 戻された後で新しい状態に合わせ直す
+      const checked = updated.match(TASK)[2] !== " ";
+      setTimeout(() => {
+        if (input.isConnected) input.checked = checked;
+      });
       return;
     }
 
