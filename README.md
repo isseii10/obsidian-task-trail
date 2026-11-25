@@ -17,7 +17,7 @@ Open Settings → Community plugins → TODO State. The defaults give the behavi
 | States | `[ ]`, `[~]` 🛫, `[x]` ✅, `[-]` | The cycle, in order. Each state has a symbol (the character between the brackets) and a mark (see below), both chosen from a list. Reorder with the arrows, add with "Add state", remove with the trash icon. "Reset to default" restores the default cycle |
 | Time format | `YYYY-MM-DD HH:mm` | A [moment.js format](https://momentjs.com/docs/#/displaying/format/). Empty resets it to the default |
 | Clear times when unchecked | Off | When a task goes back to `[ ]`, remove every "mark time" added with the configured marks. A mark not followed by a time, and text such as other plugins' dates, is left alone |
-| Checkbox styles | On | Draws each state differently (see below). Turn off if your theme already styles these states |
+| Checkbox styles | Off | Draws each state differently (see below). Leave off if your theme or a CSS snippet already styles these states, since these styles would override it |
 | Checkbox clicks: Live Preview | On | When off, clicking a checkbox in Live Preview gets Obsidian's default behavior (or another plugin's, such as Tasks) |
 | Checkbox clicks: Reading view | On | The same for Reading view |
 
@@ -35,7 +35,7 @@ Open Settings → Community plugins → TODO State. The defaults give the behavi
 
 ## Checkbox styles
 
-Obsidian draws the checkbox of every state other than `[ ]` like `[x]`, and strikes through only `[x]` lines. With "Checkbox styles" on (`styles.css`):
+Obsidian draws the checkbox of every state other than `[ ]` like `[x]`, and strikes through only `[x]` lines. Turn on "Checkbox styles" to use `styles.css`:
 
 | State | Checkbox | Text |
 | --- | --- | --- |

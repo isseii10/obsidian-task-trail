@@ -4,8 +4,8 @@
    Obsidian puts it on the line (li in Reading view, .HyperMD-task-line in Live Preview) and, in Live Preview
    only, on the checkbox itself, so a checkbox is matched as input[data-task] or li[data-task] > input
    (li > p > input in loose lists).
-   Everything is scoped to body.todo-state-checkboxes, which the "Checkbox styles" setting toggles, so the
-   rules can be turned off where a theme already styles these states. */
+   Everything is scoped to body.todo-state-checkboxes, which the "Checkbox styles" setting toggles. It is off
+   by default, since these rules would override a theme or CSS snippet that styles the same states. */
 
 /* ---- Line text ----
    Obsidian strikes through and fades only [x] / [X] lines (app.css applies --checklist-done-decoration to

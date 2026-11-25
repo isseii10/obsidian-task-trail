@@ -44,8 +44,9 @@ const DEFAULT_SETTINGS = {
   clearOnUncheck: false,
   interceptLivePreview: true,
   interceptReading: true,
-  // Draw each state differently (styles.css). Off for themes that already style alternate checkboxes
-  checkboxStyles: true,
+  // Draw each state differently (styles.css). Off by default: these rules are more specific than most themes
+  // and CSS snippets, so turning them on silently overrides a user's own styling of the same states
+  checkboxStyles: false,
 };
 
 /** Length of the time at the start of `rest` (the text after a mark, leading whitespace already skipped),
@@ -458,7 +459,8 @@ class TodoStateSettingTab extends PluginSettingTab {
       .setName("Checkbox styles")
       .setDesc(
         "Draw each state differently (in progress, cancelled, question...). Obsidian alone draws every state " +
-          "other than [ ] as done. Turn off if your theme already styles these states.",
+          "other than [ ] as done. Leave off if your theme or a CSS snippet already styles these states, since " +
+          "these styles would override it.",
       )
       .addToggle((t) =>
         t.setValue(s.checkboxStyles).onChange(async (v) => {
