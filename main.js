@@ -13,7 +13,7 @@ const ORDER = [" ", "~", "x", "-"];
 const TASK = /^(\s*(?:[-*+]|\d+[.)]) \[)(.)(\])/;
 
 const PRESETS = {
-  nerd: { name: "Nerd Font (󱓞 / 󰈼)", inProgress: "󱓞", done: "󰈼" },
+  nerd: { name: "Nerd Font", inProgress: "󱓞", done: "󰈼" },
   emoji: { name: "Emoji (🛫 / ✅)", inProgress: "🛫", done: "✅" },
 };
 
@@ -172,6 +172,11 @@ class TodoStateSettingTab extends PluginSettingTab {
     const save = () => this.plugin.saveSettings();
     containerEl.empty();
 
+    // Draw the mark inputs in the same font as notes, so a Nerd Font set up for notes (theme, CSS snippet)
+    // also applies here. The settings UI font usually lacks Nerd Font glyphs and shows them as boxes
+    const noteEl = document.querySelector(".markdown-source-view.mod-cm6 .cm-scroller, .markdown-rendered");
+    const markFont = noteEl ? getComputedStyle(noteEl).fontFamily : "var(--font-text)";
+
     new Setting(containerEl).setName("Marks").setHeading();
 
     const presetOf = () =>
@@ -198,24 +203,26 @@ class TodoStateSettingTab extends PluginSettingTab {
     new Setting(containerEl)
       .setName("In progress [~] mark")
       .setDesc("Added before the time when a task becomes [~]. Leave empty to add no time for [~].")
-      .addText((t) =>
+      .addText((t) => {
+        t.inputEl.style.fontFamily = markFont;
         t.setValue(s.stampInProgress).onChange(async (v) => {
           s.stampInProgress = v.trim();
           dropdown.setValue(presetOf());
           await save();
-        }),
-      );
+        });
+      });
 
     new Setting(containerEl)
       .setName("Done [x] mark")
       .setDesc("Added before the time when a task becomes [x]. Leave empty to add no time for [x].")
-      .addText((t) =>
+      .addText((t) => {
+        t.inputEl.style.fontFamily = markFont;
         t.setValue(s.stampDone).onChange(async (v) => {
           s.stampDone = v.trim();
           dropdown.setValue(presetOf());
           await save();
-        }),
-      );
+        });
+      });
 
     new Setting(containerEl).setName("Time").setHeading();
 
