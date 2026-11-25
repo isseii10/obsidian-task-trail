@@ -174,6 +174,88 @@ const MARK_OPTIONS = [
   { value: "📅", label: "📅 due" },
 ];
 
+/** Whether a state symbol is usable: one character that Obsidian reads as a task, and that cannot break the
+    line. Brackets and backslashes would end or escape "[ ]"; whitespace other than the space of "[ ]", control
+    and invisible format characters would turn the line into something that is no longer a task
+    @param {unknown} symbol */
+function isValidSymbol(symbol) {
+  if (typeof symbol !== "string" || [...symbol].length !== 1) return false;
+  if (symbol === " ") return true;
+  return !/[\[\]\\\s\p{Cc}\p{Cf}]/u.test(symbol);
+}
+
+/** Whether a mark is usable. Digits would be mistaken for a time (see timeLength), control characters (e.g. a
+    newline) would split the line, and surrounding spaces would never match the stamp written back
+    @param {unknown} mark */
+function isValidMark(mark) {
+  return typeof mark === "string" && mark === mark.trim() && !/[\p{Nd}\p{Cc}]/u.test(mark);
+}
+
+/** Settings from data.json, checked. The settings UI only offers valid values, but data.json can be edited by
+    hand (the way to use a mark outside the lists), so anything invalid is replaced with its default instead of
+    being written into notes. Returns the settings and a description of what was ignored
+    @param {unknown} raw what loadData returned
+    @returns {{ settings: Settings, ignored: string[] }} */
+function sanitizeSettings(raw) {
+  /** @type {Record<string, any>} */
+  const data = raw && typeof raw === "object" && !Array.isArray(raw) ? { ...raw } : {};
+  /** @type {string[]} */
+  const ignored = [];
+  // 0.2.0 development builds stored the [~] and [x] marks separately
+  if (!data.states && ("stampInProgress" in data || "stampDone" in data)) {
+    data.states = DEFAULT_SETTINGS.states.map((st) => ({ ...st }));
+    if ("stampInProgress" in data) data.states[1].mark = data.stampInProgress;
+    if ("stampDone" in data) data.states[2].mark = data.stampDone;
+  }
+
+  /** @type {State[]} */
+  let states = [];
+  if (Array.isArray(data.states)) {
+    for (const st of data.states) {
+      const ok =
+        st &&
+        typeof st === "object" &&
+        isValidSymbol(st.symbol) &&
+        isValidMark(st.mark) &&
+        !states.some((o) => o.symbol === st.symbol);
+      if (ok) states.push({ symbol: st.symbol, mark: st.mark });
+      else ignored.push(`state ${JSON.stringify(st)}`);
+    }
+  } else if (data.states !== undefined) {
+    ignored.push("states (not a list)");
+  }
+  if (states.length < 2) {
+    if (data.states !== undefined) ignored.push("states (fewer than two valid states; using the default)");
+    states = DEFAULT_SETTINGS.states.map((st) => ({ ...st }));
+  }
+
+  let dateFormat = DEFAULT_SETTINGS.dateFormat;
+  if (typeof data.dateFormat === "string" && data.dateFormat.trim() && !/\p{Cc}/u.test(data.dateFormat)) {
+    dateFormat = data.dateFormat;
+  } else if (data.dateFormat !== undefined) {
+    ignored.push("dateFormat");
+  }
+
+  /** @param {"clearOnUncheck" | "interceptLivePreview" | "interceptReading" | "checkboxStyles"} key */
+  const flag = (key) => {
+    if (typeof data[key] === "boolean") return data[key];
+    if (data[key] !== undefined) ignored.push(key);
+    return DEFAULT_SETTINGS[key];
+  };
+
+  return {
+    settings: {
+      states,
+      dateFormat,
+      clearOnUncheck: flag("clearOnUncheck"),
+      interceptLivePreview: flag("interceptLivePreview"),
+      interceptReading: flag("interceptReading"),
+      checkboxStyles: flag("checkboxStyles"),
+    },
+    ignored,
+  };
+}
+
 class TodoStatePlugin extends Plugin {
   async onload() {
     await this.loadSettings();
@@ -225,23 +307,18 @@ class TodoStatePlugin extends Plugin {
   }
 
   async loadSettings() {
-    const data = (await this.loadData()) || {};
-    // 0.2.0 development builds stored the [~] and [x] marks separately
-    const migrated = !data.states && ("stampInProgress" in data || "stampDone" in data);
-    if (migrated) {
-      data.states = DEFAULT_SETTINGS.states.map((st) => ({ ...st }));
-      if ("stampInProgress" in data) data.states[1].mark = data.stampInProgress;
-      if ("stampDone" in data) data.states[2].mark = data.stampDone;
-    }
-    delete data.stampInProgress;
-    delete data.stampDone;
+    const raw = await this.loadData();
+    const { settings, ignored } = sanitizeSettings(raw);
     /** @type {Settings} */
-    this.settings = Object.assign({}, DEFAULT_SETTINGS, data);
-    if (!Array.isArray(this.settings.states) || this.settings.states.length < 2) {
-      this.settings.states = DEFAULT_SETTINGS.states;
+    this.settings = settings;
+    if (ignored.length > 0) {
+      new Notice(`TODO State: ignored invalid settings in data.json: ${ignored.join(", ")}`, 0);
     }
-    this.settings.states = this.settings.states.map((st) => ({ ...st }));
-    if (migrated) await this.saveSettings();
+    // Write back only the 0.2.0 development format, so that data.json is not rewritten behind the user's back
+    // when it only has invalid values (they stay in the file to be fixed by hand)
+    if (raw && typeof raw === "object" && ("stampInProgress" in raw || "stampDone" in raw)) {
+      await this.saveSettings();
+    }
   }
 
   onunload() {
@@ -433,7 +510,8 @@ class TodoStateSettingTab extends PluginSettingTab {
         .setDefaultFormat(DEFAULT_SETTINGS.dateFormat)
         .setValue(s.dateFormat)
         .onChange(async (v) => {
-          s.dateFormat = v.trim() || DEFAULT_SETTINGS.dateFormat;
+          // Same rule as sanitizeSettings: a control character would split the line
+          s.dateFormat = v.trim() && !/\p{Cc}/u.test(v) ? v.trim() : DEFAULT_SETTINGS.dateFormat;
           preview();
           await save();
         }),
@@ -501,5 +579,5 @@ class TodoStateSettingTab extends PluginSettingTab {
 
 // `internals`: the line-editing functions, for the tests (test/). Obsidian only uses the class itself
 module.exports = Object.assign(TodoStatePlugin, {
-  internals: { nextLine, stamp, clearStamps, timeLength, DEFAULT_SETTINGS },
+  internals: { nextLine, stamp, clearStamps, timeLength, sanitizeSettings, DEFAULT_SETTINGS },
 });
