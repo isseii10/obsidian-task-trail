@@ -44,6 +44,8 @@ npm install   # only moment, the same version Obsidian bundles
 npm test
 ```
 
+CI (`.github/workflows/test.yml`) runs the same checks on every push and pull request, and on a tag also checks that the tag matches `manifest.json`'s `version`.
+
 ## Releasing
 
 Bump `version` in `manifest.json`, create a release with a tag of the same name, and attach `main.js` and `manifest.json`.
