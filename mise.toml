@@ -1,0 +1,3 @@
+# Same Node as Obsidian 1.15.1 (Electron 43). Check with: obsidian eval code='process.versions.node'
+[tools]
+node = "24.22.1"
