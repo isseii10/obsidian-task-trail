@@ -4,6 +4,7 @@
 
 ## Code
 
+- **Scope**: before adding a feature, setting or option, check it against the Scope section of README.md. Leave out what does not fit.
 - **Language**: keep `main.js` as plain CommonJS with ES2020 syntax, and use no Node APIs. The plugin also runs on mobile, where there is no Node. `tsconfig.json` catches newer built-ins but not newer syntax.
 - **Compatibility**: use only Obsidian APIs available at `minAppVersion` (1.4.0). Check each API's `@since` tag in `node_modules/obsidian/obsidian.d.ts`.
 - **Comments**: record the reason behind every decision in a code comment, for example "X needs 1.5.7, so Y". The next reader should not have to rediscover it.

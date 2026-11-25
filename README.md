@@ -8,6 +8,16 @@ An Obsidian plugin that cycles task checkboxes through states (by default `[ ]` 
   - If only the mark is left (its time was deleted), the time is inserted right after that mark
 - By default, times are never removed automatically, so a misclick never loses a record. To redo one, delete the mark together with its time (if you delete only the mark and keep the time, a new "mark time" is appended and you end up with two times). To remove them when a task goes back to `[ ]`, turn on "Clear times when unchecked"
 
+## Scope
+
+This plugin does one thing: it moves a task through its checkbox states and records when that happened.
+
+- **The cycle only.** It offers only states that a task moves through (to do, in progress, done) and how a task ends (cancelled, forwarded, scheduled). Markers that say nothing about progress, such as `[!]` important, `[*]` star or `[?]` question, are left to themes and other plugins.
+- **Times are records.** A stamp records when a state was reached, so only marks that mean "this happened at this time" are offered. Stamps are never removed unless you turn that on, because a misclick must not lose a record.
+- **Plain Markdown.** Everything is written into the line as text, so the note reads the same in any editor. The default behavior matches the author's Neovim setup, which edits the same notes.
+- **No more than that.** Queries, due dates, recurrence and task lists across notes belong to plugins such as [Tasks](https://github.com/obsidian-tasks-group/obsidian-tasks) or Dataview.
+- **Stay out of the way.** Checkbox clicks can be left to Obsidian or another plugin, and the checkbox styles are off by default, so that they do not override your theme or CSS snippets.
+
 ## Settings
 
 Open Settings → Community plugins → TODO State. The defaults give the behavior described above.
