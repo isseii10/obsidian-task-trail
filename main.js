@@ -7,7 +7,11 @@
    - Times are not removed automatically by default, so a misclick never loses a record. Optionally, they are
      removed when a task goes back to [ ]
    - The states and their order, the marks, the time format and click interception are configurable
-   Written in plain JavaScript (CommonJS) so that it runs without a build step. */
+   Written in plain JavaScript (CommonJS) so that it runs without a build step: this file is what gets released
+   and copied into a vault. It is type-checked with TypeScript through JSDoc (see tsconfig.json) instead.
+   Compatibility: minAppVersion is 1.4.0. Every Obsidian API used here exists in 1.4.0, checked against the
+   @since tags in obsidian.d.ts; APIs added later are avoided (see getAbstractFileByPath below). The plugin
+   also runs on mobile (isDesktopOnly: false), where there is no Node, so no Node API is used. */
 const { Plugin, PluginSettingTab, Setting, MarkdownView, Notice, TFile, moment: obsidianMoment } = require("obsidian");
 const { EditorView } = require("@codemirror/view");
 
@@ -55,7 +59,9 @@ function timeLength(rest, format) {
 }
 
 /** Remove every "mark time" of the given marks from `from` on. A mark not followed by a time is left alone,
-    since it may be ordinary text
+    since it may be ordinary text. Known limitation: after a time in an earlier format, a following number
+    is taken as part of the time ("12/31 10:00 3 items" -> "items"), since timeLength cannot tell where such
+    a time ends
     @param {string} line
     @param {string[]} marks
     @param {string} format
@@ -83,7 +89,9 @@ function clearStamps(line, marks, format, from) {
 }
 
 /** Add "mark time" to a line.
-    - If the mark is followed by a time, it is already stamped: leave the line as is
+    - If the mark is followed by a time, it is already stamped: leave the line as is. This includes an
+      incomplete time (e.g. "2026-01-0"): it cannot be told apart from a time in an earlier format, and
+      overwriting would rewrite every old record after a format change, so the user fixes it by hand
     - If only the mark is left (its time was deleted), insert the time right after that mark
     - If the mark is missing, append "mark time" to the end of the line
     Only the text from `from` on (after the checkbox) is searched, so a mark equal to the state symbol is not
@@ -162,6 +170,7 @@ class TodoStatePlugin extends Plugin {
     const onCheckbox = (evt) => {
       const target = evt.target;
       if (!(target instanceof HTMLInputElement) || !target.matches("input.task-list-item-checkbox")) return;
+      // Live Preview checkboxes are inside CodeMirror; everything else is Reading view
       const inEditor = !!target.closest(".cm-editor");
       if (inEditor ? !this.settings.interceptLivePreview : !this.settings.interceptReading) return;
       evt.preventDefault();
@@ -217,6 +226,7 @@ class TodoStatePlugin extends Plugin {
   cycleFromCheckbox(input) {
     // Live Preview: get the line from CodeMirror. findFromDOM only finds the editor from its outer element
     // (.cm-editor), so walk up from the checkbox
+    // (closest() is typed as Element, but these are always HTMLElements)
     const editorEl = /** @type {HTMLElement | null} */ (input.closest(".cm-editor"));
     const cm = editorEl && EditorView.findFromDOM(editorEl);
     if (cm) {

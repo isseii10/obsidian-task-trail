@@ -13,7 +13,7 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
-      # Node from mise.toml (the same version Obsidian uses)
+      # Node from mise.toml (the same version Obsidian uses). Not actions/setup-node, which cannot read mise.toml
       - uses: jdx/mise-action@v5
 
       - run: npm ci

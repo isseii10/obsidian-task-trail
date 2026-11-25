@@ -1,5 +1,5 @@
 {
-  // Type check only: main.js stays plain JavaScript and is never compiled
+  // Type check only: main.js stays plain JavaScript and is never compiled (it is what gets released)
   "compilerOptions": {
     "allowJs": true,
     "checkJs": true,
@@ -7,8 +7,12 @@
     "strict": true,
     "target": "ES2020",
     "module": "commonjs",
+    // ES2020 built-ins only, to stay safe in older mobile WebViews: tsc reports newer APIs such as
+    // String.prototype.replaceAll (ES2021). It does not report newer syntax under noEmit, so keep that by hand
     "lib": ["ES2020", "DOM"],
+    // No Node types: the plugin must not use Node APIs, since mobile has no Node
     "types": [],
+    // obsidian.d.ts pulls in CodeMirror and moment types that do not need checking
     "skipLibCheck": true
   },
   "files": ["main.js"]
