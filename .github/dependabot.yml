@@ -10,6 +10,10 @@ updates:
     directory: /
     schedule:
       interval: monthly
+    # @codemirror/* are the copies Obsidian ships, and the obsidian package pins them exactly as peers, so a
+    # bump on its own fails npm ci. Update them together with obsidian instead
+    ignore:
+      - dependency-name: "@codemirror/*"
     groups:
       dev:
         patterns: ["*"]
