@@ -6,7 +6,7 @@ An Obsidian plugin that cycles task checkboxes through states (by default `[ ]` 
 - By default, switching to `[~]` appends `🛫 YYYY-MM-DD HH:mm`, and switching to `[x]` appends `✅ YYYY-MM-DD HH:mm` (the same emoji as the start and done dates of the [Tasks](https://github.com/obsidian-tasks-group/obsidian-tasks) plugin)
   - If the mark is already followed by a time, nothing is added, so cycling repeatedly never adds duplicates
   - If only the mark is left (its time was deleted), the time is inserted right after that mark
-- Times are never removed automatically. To redo one, delete the mark together with its time (if you delete only the mark and keep the time, a new "mark time" is appended and you end up with two times)
+- By default, times are never removed automatically, so a misclick never loses a record. To redo one, delete the mark together with its time (if you delete only the mark and keep the time, a new "mark time" is appended and you end up with two times). To remove them when a task goes back to `[ ]`, turn on "Clear times when unchecked"
 
 ## Settings
 
@@ -16,6 +16,7 @@ Open Settings → Community plugins → TODO State. The defaults give the behavi
 | --- | --- | --- |
 | States | `[ ]`, `[~]` 🛫, `[x]` ✅, `[-]` | The cycle, in order. Each state has a symbol (the character between the brackets; leave empty for a space) and a mark (see below). Reorder with the arrows, add with "Add state", remove with the trash icon. "Reset to default" restores the default cycle |
 | Time format | `YYYY-MM-DD HH:mm` | A [moment.js format](https://momentjs.com/docs/#/displaying/format/). Empty resets it to the default |
+| Clear times when unchecked | Off | When a task goes back to `[ ]`, remove every "mark time" added with the configured marks. A mark not followed by a time, and text such as other plugins' dates, is left alone |
 | Checkbox clicks: Live Preview | On | When off, clicking a checkbox in Live Preview gets Obsidian's default behavior (or another plugin's, such as Tasks) |
 | Checkbox clicks: Reading view | On | The same for Reading view |
 

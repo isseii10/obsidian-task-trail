@@ -3,7 +3,8 @@
      in the cycle. By default: [ ] -> [~] -> [x] -> [-] -> [ ]
    - A state can have a mark: switching to it appends "<mark> <time>" (not added again if the mark already
      has a time). By default [~] has 🛫 and [x] has ✅
-   - Times are never removed automatically, so a misclick never loses a record. Remove them by hand to redo
+   - Times are not removed automatically by default, so a misclick never loses a record. Optionally, they are
+     removed when a task goes back to [ ]
    - The states and their order, the marks, the time format and click interception are configurable
    Written in plain JavaScript (CommonJS) so that it runs without a build step. */
 const { Plugin, PluginSettingTab, Setting, MarkdownView, Notice, moment } = require("obsidian");
@@ -22,19 +23,44 @@ const DEFAULT_SETTINGS = {
     { symbol: "-", mark: "" },
   ],
   dateFormat: "YYYY-MM-DD HH:mm",
+  clearOnUncheck: false,
   interceptLivePreview: true,
   interceptReading: true,
 };
 
-/** Whether the text after a mark (leading whitespace already skipped) is a time.
-    Anything starting with a digit counts, so times written in an earlier format still count.
-    For formats that do not start with a digit (e.g. MMM D), check whether it parses with the format */
-function startsWithTime(rest, format) {
-  if (/^\d/.test(rest)) return true;
+/** Length of the time at the start of `rest` (the text after a mark, leading whitespace already skipped),
+    or 0 if it does not start with a time. The longest prefix that parses with the format counts. Failing
+    that, anything starting with a digit counts as a date with an optional time, so times written in an
+    earlier format are still recognized */
+function timeLength(rest, format) {
   for (let k = Math.min(rest.length, 64); k > 0; k--) {
-    if (moment(rest.slice(0, k), format, true).isValid()) return true;
+    if (moment(rest.slice(0, k), format, true).isValid()) return k;
   }
-  return false;
+  const m = rest.match(/^\d[\d\-\/.:]*(?:[ T]\d{1,2}:\d{2}(?::\d{2})?)?/);
+  return m ? m[0].length : 0;
+}
+
+/** Remove every "mark time" of the given marks from `from` on. A mark not followed by a time is left alone,
+    since it may be ordinary text */
+function clearStamps(line, marks, format, from) {
+  for (const mark of new Set(marks.filter(Boolean))) {
+    let i = line.indexOf(mark, from);
+    while (i !== -1) {
+      const after = line.slice(i + mark.length);
+      const rest = after.replace(/^\s+/, "");
+      const len = timeLength(rest, format);
+      if (len === 0) {
+        i = line.indexOf(mark, i + mark.length);
+        continue;
+      }
+      let start = i;
+      while (start > from && /\s/.test(line[start - 1])) start--;
+      const end = i + mark.length + (after.length - rest.length) + len;
+      line = line.slice(0, start) + line.slice(end);
+      i = line.indexOf(mark, Math.max(start, from));
+    }
+  }
+  return line;
 }
 
 /** Add "mark time" to a line.
@@ -48,7 +74,7 @@ function stamp(line, mark, format, from) {
   let orphan = -1;
   for (let i = line.indexOf(mark, from); i !== -1; i = line.indexOf(mark, i + mark.length)) {
     const rest = line.slice(i + mark.length).replace(/^\s+/, "");
-    if (startsWithTime(rest, format)) return line;
+    if (timeLength(rest, format) > 0) return line;
     if (orphan === -1) orphan = i;
   }
   if (orphan === -1) return line + " " + mark + " " + time;
@@ -65,9 +91,13 @@ function nextLine(line, settings) {
   if (!m) return null;
   const states = settings.states;
   const next = states[(states.findIndex((st) => st.symbol === m[2]) + 1) % states.length];
+  const format = settings.dateFormat || DEFAULT_SETTINGS.dateFormat;
   const head = m[1] + next.symbol + m[3];
-  const out = head + line.slice(m[0].length);
-  return next.mark ? stamp(out, next.mark, settings.dateFormat || DEFAULT_SETTINGS.dateFormat, head.length) : out;
+  let out = head + line.slice(m[0].length);
+  if (next.symbol === " " && settings.clearOnUncheck) {
+    out = clearStamps(out, states.map((st) => st.mark), format, head.length);
+  }
+  return next.mark ? stamp(out, next.mark, format, head.length) : out;
 }
 
 /** Why a state symbol cannot be used, or null if it can */
@@ -311,6 +341,19 @@ class TodoStateSettingTab extends PluginSettingTab {
         }),
     );
     preview();
+
+    new Setting(containerEl)
+      .setName("Clear times when unchecked")
+      .setDesc(
+        "When a task goes back to [ ], remove the times added with the marks above. Off by default, so that a " +
+          "misclick never loses a record. A mark not followed by a time is left alone.",
+      )
+      .addToggle((t) =>
+        t.setValue(s.clearOnUncheck).onChange(async (v) => {
+          s.clearOnUncheck = v;
+          await save();
+        }),
+      );
 
     new Setting(containerEl)
       .setName("Checkbox clicks")
