@@ -6,6 +6,7 @@
   "scripts": {
     "build": "node --check main.js",
     "test": "node --test \"test/*.test.js\"",
+    "screenshots": "node scripts/screenshots.mjs",
     "typecheck": "tsc -p ."
   },
   "devDependencies": {

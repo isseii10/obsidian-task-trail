@@ -2,6 +2,8 @@
 
 An Obsidian plugin that leaves a trail of when each task was started, finished or dropped. Click a checkbox to move the task to its next state (by default `[ ]` → `[~]` → `[x]` → `[-]` → `[ ]`), and the time is stamped at the end of the line.
 
+![Tasks in each state, with the times they were started and finished (Checkbox styles on)](images/note.png)
+
 - Cycle by clicking a checkbox (Live Preview and Reading view) or with the command "Task Trail: Cycle checkbox state"
 - By default, switching to `[~]` appends `🛫 YYYY-MM-DD HH:mm`, and switching to `[x]` appends `✅ YYYY-MM-DD HH:mm` (the same emoji as the start and done dates of the [Tasks](https://github.com/obsidian-tasks-group/obsidian-tasks) plugin)
   - If the mark is already followed by a time, nothing is added, so cycling repeatedly never adds duplicates
@@ -21,6 +23,8 @@ This plugin has one purpose: a record of when, and how far, each task progressed
 ## Settings
 
 Open Settings → Community plugins → Task Trail. The defaults give the behavior described above.
+
+<img src="images/settings.png" alt="The settings: the states of the cycle, time format, appearance and checkbox clicks" width="520">
 
 | Setting | Default | Description |
 | --- | --- | --- |
@@ -73,6 +77,8 @@ npm test
 ```
 
 `npm run build` only checks the syntax of `main.js`: there is no build, but the community plugin directory reproduces releases by running a `build` script, and with this one the released `main.js` is the committed file as is.
+
+`npm run screenshots` retakes the images in `images/` (macOS). It starts a throwaway Obsidian with its own data folder and a temp vault, so your own Obsidian and vaults are left alone, and the images come out the same on every run. Run it after changing what the plugin looks like.
 
 CI (`.github/workflows/test.yml`) runs the same checks on every push and pull request, and on a tag also checks that the tag matches `manifest.json`'s `version`.
 
